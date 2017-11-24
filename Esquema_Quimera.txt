@@ -1,0 +1,93 @@
+#
+# Delete database of exists
+#
+
+DROP DATABASE IF EXISTS Quimera;
+CREATE DATABASE Quimera;
+
+USE Quimera;
+
+DROP TABLE IF EXISTS Mediciones;
+CREATE DATABASE Mediciones (
+	#
+	# Confirmar si el indice deberia ser AUTOINCREMENT
+	#
+	MedicionID INT NOT NULL,
+	Diametro FLOAT NOT NULL,
+	Altura FLOAT,
+	Individuo INT NOT NULL, # referencia a Individuos.IndividuoID
+	Year YEAR,
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion o modificación del registro en la db
+	PRIMARY KEY (MedicionID)
+	)
+	ENGINE = INNODB;
+
+DROP TABLE IF EXISTS Individuos;
+CREATE TABLE Individuos (
+	#
+	# Confirmar si el indice deberia ser AUTOINCREMENT
+	#
+	IndividuoID INT NOT NULL,
+	Dets INT NOT NULL, # Historia de determinaciones, referencia a Determinaciones.DetID
+	Placa VARCHAR(255) DEFAULT NULL,
+	Plot INT NOT NULL, # referencia a Parcelas.PlotID
+	X FLOAT DEFAULT NULL,
+	Y FLOAT DEFAULT NULL,
+	PRIMARY KEY (IndividuoID)
+	)
+	ENGINE = INNODB;
+
+DROP TABLE IF EXISTS Parcelas;
+CREATE TABLE Parcelas (
+	PlotID INT NOT NULL,
+	Area FLOAT,
+	Custodio VARCHAR(255) NOT NULL,
+	CustodioAbbreviado VARCHAR(255) NOT NULL,
+	Proyecto VARCHAR(255) DEFAULT NULL,
+	X FLOAT NOT NULL,
+	Y FLOAT NOT NULL,
+	XMAGNA FLOAT NOY NULL,
+	YMAGNA FLOAT NOT NULL,
+	Departamento VARCHAR(255) NOT NULL,
+	Municipio VARCHAR(255) DEFAULT NULL,
+	CAR VARCHAR(255) DEFAULT NULL,
+	UAESPNN VARCHAR(255) DEFAULT NULL,
+	Region VARCHAR(255) DEFAULT NULL,
+	EscenarioReferencia VARCHAR(255) DEFAULT NULL,
+	Ecosistema VARCHAR(255) DEFAULT NULL, # Manglar, Paramo, etc
+	Acceso_publico BOOL NOT NULL DEFAULT FALSE,
+	PRIMARY KEY (PlotID)
+	)
+	ENGINE = INNODB;
+
+DROP TABLE IF EXISTS Taxonomia;
+CREATE TABLE Taxonomia (
+	#
+	# Una especie puede tener varios valores de Habito???
+	#
+	TaxonID INT NOY NULL AUTOINCREMENT,
+	Fuente VARCHAR(255) NOT NULL DEFAULT 'Custodio', # Origen nombre.
+	Familia VARCHAR(255),
+	Genero VARCHAR(255),
+	AutorGenero VARCHAR(255),
+	Epiteto VARCHAR(255),
+	AutorEpiteto VARCHAR(255),
+	SinonimoDe INT DEFAULT NULL, # Referencia a Taxonomia.TaxonID. Si es aceptado entonces NULL
+	Habito ENUM('Arborea', 'Palma', 'Liana', 'No arborea'),
+	Origen ENUM('Nativa', 'Introducida'),
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
+	PRIMARY KEY (TaxonID)
+	)
+	ENGINE = INNODB;
+
+Tabla Determinaciones
+	DetID
+	IncertidumbreDet ENUM('aff.', 'cf.', 'vel sp aff.')
+	DetPrevia # Referencia a otro DetID, si es la primera entonces NULL
+	Fecha # Fecha de insercion del registro en la db
+
+Tabla Densidades
+	DensidadID
+	Densidad
+	Especie # Referencia a Taxonomia.TaxonID
+	Fuente
