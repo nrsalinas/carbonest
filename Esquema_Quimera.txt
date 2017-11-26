@@ -28,7 +28,7 @@ CREATE TABLE Individuos (
 	# Confirmar si el indice deberia ser AUTOINCREMENT
 	#
 	IndividuoID INT NOT NULL,
-	Dets INT NOT NULL, # Historia de determinaciones, referencia a Determinaciones.DetID
+	Dets INT NOT NULL UNIQUE, # Historia de determinaciones, referencia a Determinaciones.DetID. Deben ser valores unicos por individuo.
 	Placa VARCHAR(255) DEFAULT NULL,
 	Plot INT NOT NULL, # referencia a Parcelas.PlotID
 	X FLOAT DEFAULT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE Taxonomia (
 	#
 	# Una especie puede tener varios valores de Habito???
 	#
-	TaxonID INT NOY NULL AUTOINCREMENT,
+	TaxonID INT NOT NULL AUTOINCREMENT,
 	Fuente VARCHAR(255) NOT NULL DEFAULT 'Custodio', # Origen nombre.
 	Familia VARCHAR(255),
 	Genero VARCHAR(255),
@@ -80,14 +80,35 @@ CREATE TABLE Taxonomia (
 	)
 	ENGINE = INNODB;
 
-Tabla Determinaciones
-	DetID
-	IncertidumbreDet ENUM('aff.', 'cf.', 'vel sp aff.')
-	DetPrevia # Referencia a otro DetID, si es la primera entonces NULL
-	Fecha # Fecha de insercion del registro en la db
+DROP TABLE IF EXISTS Determinaciones;
+CREATE TABLE Determinaciones (
+	DetID INT NOT NULL AUTOINCREMENT,
+	Taxon INT NOT NULL, # Referencia a Taxonomia.TaxonID
+	Incert ENUM('aff.', 'cf.', 'vel sp aff.'),
+	DetPrevia INT DEFAULT NULL, # Referencia a otro DetID, si es la primera entonces NULL
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
+	PRIMARY KEY (DetID)
+	)
+	ENGINE = INNODB;
 
-Tabla Densidades
-	DensidadID
-	Densidad
-	Especie # Referencia a Taxonomia.TaxonID
-	Fuente
+DROP TABLE IF EXISTS Densidades;
+CREATE TABLE Densidades (
+	DensidadID INT NOT NULL AUTOINCREMENT,
+	Densidad FLOAT NOT NULL,
+	Taxon INT NOT NULL,  # Referencia a Taxonomia.TaxonID
+	Fuente INT NOT NULL,
+	PRIMARY KEY (DensidadID)
+	)
+	ENGINE = INNODB;
+
+DROP TABLE IF EXISTS Fuentes;
+CREATE TABLE Fuentes (
+	FuenteID INT NOT NULL AUTOINCREMENT,
+	Nombre VARCHAR(255) NOT NULL,
+	Acronimo VARCHAR(10) DEFAULT NULL,
+	Url VARCHAR(255) DEFAULT NULL,
+	Year INT DEFAULT NULL,
+	Citacion TEXT DEFAULT NULL,
+	PRIMARY KEY (FuenteID)
+	)
+	ENGINE = INNODB;
