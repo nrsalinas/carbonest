@@ -8,7 +8,7 @@ CREATE DATABASE Quimera;
 USE Quimera;
 
 DROP TABLE IF EXISTS Mediciones;
-CREATE DATABASE Mediciones (
+CREATE TABLE Mediciones (
 	#
 	# Confirmar si el indice deberia ser AUTOINCREMENT
 	#
@@ -46,7 +46,7 @@ CREATE TABLE Parcelas (
 	Proyecto VARCHAR(255) DEFAULT NULL,
 	X FLOAT NOT NULL,
 	Y FLOAT NOT NULL,
-	XMAGNA FLOAT NOY NULL,
+	XMAGNA FLOAT NOT NULL,
 	YMAGNA FLOAT NOT NULL,
 	Departamento VARCHAR(255) NOT NULL,
 	Municipio VARCHAR(255) DEFAULT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE Taxonomia (
 	#
 	# Una especie puede tener varios valores de Habito???
 	#
-	TaxonID INT NOT NULL AUTOINCREMENT,
+	TaxonID INT AUTO_INCREMENT NOT NULL,
 	Fuente VARCHAR(255) NOT NULL DEFAULT 'Custodio', # Origen nombre.
 	Familia VARCHAR(255),
 	Genero VARCHAR(255),
@@ -82,7 +82,7 @@ CREATE TABLE Taxonomia (
 
 DROP TABLE IF EXISTS Determinaciones;
 CREATE TABLE Determinaciones (
-	DetID INT NOT NULL AUTOINCREMENT,
+	DetID INT AUTO_INCREMENT NOT NULL,
 	Taxon INT NOT NULL, # Referencia a Taxonomia.TaxonID
 	Incert ENUM('aff.', 'cf.', 'vel sp aff.'),
 	DetPrevia INT DEFAULT NULL, # Referencia a otro DetID, si es la primera entonces NULL
@@ -93,17 +93,17 @@ CREATE TABLE Determinaciones (
 
 DROP TABLE IF EXISTS Densidades;
 CREATE TABLE Densidades (
-	DensidadID INT NOT NULL AUTOINCREMENT,
+	DensidadID INT AUTO_INCREMENT NOT NULL,
 	Densidad FLOAT NOT NULL,
 	Taxon INT NOT NULL,  # Referencia a Taxonomia.TaxonID
-	Fuente INT NOT NULL,
+	Fuente INT NOT NULL, # Referencia a Fuentes.FuenteID
 	PRIMARY KEY (DensidadID)
 	)
 	ENGINE = INNODB;
 
 DROP TABLE IF EXISTS Fuentes;
 CREATE TABLE Fuentes (
-	FuenteID INT NOT NULL AUTOINCREMENT,
+	FuenteID INT AUTO_INCREMENT NOT NULL,
 	Nombre VARCHAR(255) NOT NULL,
 	Acronimo VARCHAR(10) DEFAULT NULL,
 	Url VARCHAR(255) DEFAULT NULL,
@@ -112,3 +112,42 @@ CREATE TABLE Fuentes (
 	PRIMARY KEY (FuenteID)
 	)
 	ENGINE = INNODB;
+
+
+# Foreign keys
+
+ALTER TABLE Mediciones
+ADD FOREIGN KEY med2ind (Individuo)
+REFERENCES Individuos (IndividuoID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Individuos
+ADD FOREIGN KEY ind2det (Dets)
+REFERENCES Determinaciones (DetID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Individuos
+ADD FOREIGN KEY ind2parc (Plot)
+REFERENCES Parcelas (PlotID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Determinaciones
+ADD FOREIGN KEY det2tax (Taxon)
+REFERENCES Taxonomia (TaxonID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Densidades
+ADD FOREIGN KEY den2tax (Taxon)
+REFERENCES Taxonomia (TaxonID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Densidades
+ADD FOREIGN KEY den2fuent (Fuente)
+REFERENCES Fuentes (FuenteID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
