@@ -12,7 +12,7 @@ CREATE TABLE Mediciones (
 	#
 	# Confirmar si el indice deberia ser AUTOINCREMENT
 	#
-	MedicionID INT NOT NULL,
+	MedicionID INT NOT NULL UNIQUE,
 	Diametro FLOAT NOT NULL,
 	Altura FLOAT,
 	Individuo INT NOT NULL, # referencia a Individuos.IndividuoID
