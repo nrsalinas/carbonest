@@ -6,7 +6,7 @@ USE IFN;
 DROP TABLE IF EXISTS Detritos;
 CREATE TABLE Detritos (
 	DetritoID INT NOT NULL UNIQUE,
-	Plot INT NOT NULL, # referencia a Parcelas.PlotID
+	Plot INT NOT NULL, # referencia a Conglomerados.PlotID
 	Transecto ENUM('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H') NOT NULL,
 	Seccion TINYINT NOT NULL, # 1, 2, 3
 	Pieza INT NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE Individuos (
 	# Confirmar si el indice deberia ser AUTOINCREMENT
 	#
 	IndividuoID INT NOT NULL,
-	Plot INT NOT NULL, # referencia a Parcelas.PlotID
+	Plot INT NOT NULL, # referencia a Conglomerados.PlotID
 	Azimut FLOAT NOT NULL,
 	Distancia FLOAT NOT NULL,
 	Dets INT NOT NULL UNIQUE, # Historia de determinaciones, referencia a Determinaciones.DetID. Deben ser valores unicos por individuo.
@@ -102,3 +102,48 @@ CREATE TABLE Determinaciones (
 	PRIMARY KEY (DetID)
 	)
 	ENGINE = INNODB;
+
+
+DROP TABLE IF EXISTS Conglomerados;
+CREATE TABLE Conglomerados (
+	PlotID INT NOT NULL UNIQUE,
+	Departamento VARCHAR(50),
+	Region ENUM('Amazonia', 'Andes', 'Pacifico', 'Orinoquia', 'Caribe') NOT NULL,
+	Fecha YEAR, # Año toma de  datos
+	Socio VARCHAR(255),
+	SFP-C TINYINT NOT NULL, # No. de subparcelas establecidas ?????
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (PlotID)
+	)
+	ENGINE = INNODB;
+
+# Foreign keys
+ALTER TABLE Detritos
+ADD FOREIGN KEY detr2plot (Plot)
+REFERENCES Conglomerados (PlotID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Tallos
+ADD FOREIGN KEY tallo2ind (Individuo)
+REFERENCES Individuos (IndividuoID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Individuos
+ADD FOREIGN KEY ind2plot (Plot)
+REFERENCES Conglomerados (PlotID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Individuos
+ADD FOREIGN KEY ind2dete (Dets)
+REFERENCES Determinaciones (DetID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Determinaciones
+ADD FOREIGN KEY dete2tax (Taxon)
+REFERENCES Taxonomia (TaxonID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
