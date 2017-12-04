@@ -3,7 +3,7 @@
 #
 
 DROP DATABASE IF EXISTS Quimera;
-CREATE DATABASE Quimera;
+CREATE DATABASE Quimera CHARACTER SET utf8 COLLATE utf8_bin;
 
 USE Quimera;
 
