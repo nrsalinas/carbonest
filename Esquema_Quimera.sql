@@ -7,6 +7,8 @@ CREATE DATABASE Quimera;
 
 USE Quimera;
 
+
+/*
 DROP TABLE IF EXISTS Mediciones;
 CREATE TABLE Mediciones (
 	#
@@ -17,17 +19,18 @@ CREATE TABLE Mediciones (
 	Altura FLOAT,
 	Individuo INT NOT NULL, # referencia a Individuos.IndividuoID
 	Year YEAR,
-	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion o modificación del registro en la db
+	FechaMod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion o modificación del registro en la db
 	PRIMARY KEY (MedicionID)
 	)
-	ENGINE = INNODB;
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
+*/
 
 DROP TABLE IF EXISTS Individuos;
 CREATE TABLE Individuos (
-	#
-	# Confirmar si el indice deberia ser AUTOINCREMENT
-	#
 	IndividuoID INT NOT NULL,
+	Diametro FLOAT NOT NULL,
+	Altura FLOAT DEFAULT NULL,
+	Year YEAR DEFAULT NULL,
 	Dets INT NOT NULL UNIQUE, # Historia de determinaciones, referencia a Determinaciones.DetID. Deben ser valores unicos por individuo.
 	Placa VARCHAR(255) DEFAULT NULL,
 	Plot INT NOT NULL, # referencia a Parcelas.PlotID
@@ -35,7 +38,7 @@ CREATE TABLE Individuos (
 	Y FLOAT DEFAULT NULL,
 	PRIMARY KEY (IndividuoID)
 	)
-	ENGINE = INNODB;
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
 DROP TABLE IF EXISTS Parcelas;
 CREATE TABLE Parcelas (
@@ -54,11 +57,10 @@ CREATE TABLE Parcelas (
 	UAESPNN VARCHAR(255) DEFAULT NULL,
 	Region VARCHAR(255) DEFAULT NULL,
 	EscenarioReferencia VARCHAR(255) DEFAULT NULL,
-	Ecosistema VARCHAR(255) DEFAULT NULL, # Manglar, Paramo, etc
-	Acceso_publico BOOL NOT NULL DEFAULT FALSE,
+	AccesoPublico BOOL NOT NULL DEFAULT FALSE,
 	PRIMARY KEY (PlotID)
 	)
-	ENGINE = INNODB;
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
 DROP TABLE IF EXISTS Taxonomia;
 CREATE TABLE Taxonomia (
@@ -67,18 +69,20 @@ CREATE TABLE Taxonomia (
 	#
 	TaxonID INT AUTO_INCREMENT NOT NULL,
 	Fuente VARCHAR(255) NOT NULL DEFAULT 'Custodio', # Origen nombre.
-	Familia VARCHAR(255),
-	Genero VARCHAR(255),
-	AutorGenero VARCHAR(255),
-	Epiteto VARCHAR(255),
-	AutorEpiteto VARCHAR(255),
+	Familia VARCHAR(255) DEFAULT NULL,
+	Genero VARCHAR(255) DEFAULT NULL,
+	AutorGenero VARCHAR(255) DEFAULT NULL,
+	Epiteto VARCHAR(255) DEFAULT NULL,
+	AutorEpiteto VARCHAR(255) DEFAULT NULL,
 	SinonimoDe INT DEFAULT NULL, # Referencia a Taxonomia.TaxonID. Si es aceptado entonces NULL
-	Habito ENUM('Arborea', 'Palma', 'Liana', 'No arborea'),
-	Origen ENUM('Nativa', 'Introducida'),
-	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
+	Habito ENUM('Arborea', 'Palma', 'Liana', 'No arborea') DEFAULT NULL,
+	Origen ENUM('Nativa', 'Introducida') DEFAULT NULL,
+#	Ecosistema ENUM('Manglar', 'Paramo') DEFAULT NULL, # No estoy seguro que esto deba ir aca
+	FechaMod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
 	PRIMARY KEY (TaxonID)
 	)
-	ENGINE = INNODB;
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
+
 
 DROP TABLE IF EXISTS Determinaciones;
 CREATE TABLE Determinaciones (
@@ -86,10 +90,10 @@ CREATE TABLE Determinaciones (
 	Taxon INT NOT NULL, # Referencia a Taxonomia.TaxonID
 	Incert ENUM('aff.', 'cf.', 'vel sp aff.'),
 	DetPrevia INT DEFAULT NULL, # Referencia a otro DetID, si es la primera entonces NULL
-	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
+	FechaMod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
 	PRIMARY KEY (DetID)
 	)
-	ENGINE = INNODB;
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
 DROP TABLE IF EXISTS Densidades;
 CREATE TABLE Densidades (
@@ -99,7 +103,7 @@ CREATE TABLE Densidades (
 	Fuente INT NOT NULL, # Referencia a Fuentes.FuenteID
 	PRIMARY KEY (DensidadID)
 	)
-	ENGINE = INNODB;
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
 DROP TABLE IF EXISTS Fuentes;
 CREATE TABLE Fuentes (
@@ -111,16 +115,10 @@ CREATE TABLE Fuentes (
 	Citacion TEXT DEFAULT NULL,
 	PRIMARY KEY (FuenteID)
 	)
-	ENGINE = INNODB;
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
 
 # Foreign keys
-
-ALTER TABLE Mediciones
-ADD FOREIGN KEY med2ind (Individuo)
-REFERENCES Individuos (IndividuoID)
-ON DELETE RESTRICT
-ON UPDATE CASCADE;
 
 ALTER TABLE Individuos
 ADD FOREIGN KEY ind2det (Dets)
