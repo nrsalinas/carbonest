@@ -117,9 +117,10 @@ CREATE TABLE Fuentes (
 	)
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
-
-# Foreign keys
-
+#
+# Foreign keys. Habilitar despues de poblar las tablas.
+#
+/*
 ALTER TABLE Individuos
 ADD FOREIGN KEY ind2det (Dets)
 REFERENCES Determinaciones (DetID)
@@ -149,3 +150,4 @@ ADD FOREIGN KEY den2fuent (Fuente)
 REFERENCES Fuentes (FuenteID)
 ON DELETE RESTRICT
 ON UPDATE CASCADE;
+*/
