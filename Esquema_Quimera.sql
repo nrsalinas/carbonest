@@ -45,7 +45,7 @@ CREATE TABLE Parcelas (
 	PlotID INT NOT NULL,
 	Area FLOAT,
 	Custodio VARCHAR(255) NOT NULL,
-	CustodioAbbreviado VARCHAR(255) NOT NULL,
+	CustodioAbreviado VARCHAR(255) NOT NULL,
 	Proyecto VARCHAR(255) DEFAULT NULL,
 	X FLOAT NOT NULL,
 	Y FLOAT NOT NULL,
@@ -88,13 +88,18 @@ DROP TABLE IF EXISTS Determinaciones;
 CREATE TABLE Determinaciones (
 	DetID INT AUTO_INCREMENT NOT NULL,
 	Taxon INT NOT NULL, # Referencia a Taxonomia.TaxonID
-	Incert ENUM('aff.', 'cf.', 'vel sp aff.'),
+	Incert ENUM('aff.', 'cf.', 'vel sp. aff.'),
 	DetPrevia INT DEFAULT NULL, # Referencia a otro DetID, si es la primera entonces NULL
 	FechaMod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
 	PRIMARY KEY (DetID)
 	)
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
+###########################################################
+# Las densidades son valores asignados a una categoria
+# taxonomica (especie, genero, familia, etc.). Una taxon
+# puede tener varios valores de densidad.
+###########################################################
 DROP TABLE IF EXISTS Densidades;
 CREATE TABLE Densidades (
 	DensidadID INT AUTO_INCREMENT NOT NULL,

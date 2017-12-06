@@ -2,6 +2,32 @@ import MySQLdb
 import pandas as pd
 import numpy as np
 
+# Some string formatting functions for text-based queries
+def format2str(x):
+    out = u""
+    if x is np.nan or x is None:
+        out = u"NULL"
+    elif isinstance(x, bool):
+        if x == True:
+            out = u"TRUE"
+        elif x == False:
+            out = u"FALSE"
+    elif isinstance(x, unicode):
+        x = x.replace("'", "\\'")
+        out = u"'{0}'".format(x)
+    elif isinstance(x, int) or isinstance(x, float):
+        out = u"{0}".format(x)   
+    return out
+
+
+def forCond(x):
+    out = u''
+    if x == u'NULL':
+        out = u'is NULL'
+    else:
+        out = u'= {0}'.format(x)
+    return out
+
 
 asignacion = "../data/quimera/asignacion.csv"
 asig = pd.read_csv(asignacion)
