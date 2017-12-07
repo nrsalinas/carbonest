@@ -97,7 +97,7 @@ CREATE TABLE Determinaciones (
 
 ###########################################################
 # Las densidades son valores asignados a una categoria
-# taxonomica (especie, genero, familia, etc.). Una taxon
+# taxonomica (especie, genero, familia, etc.). Un taxon
 # puede tener varios valores de densidad.
 ###########################################################
 DROP TABLE IF EXISTS Densidades;
