@@ -7,26 +7,26 @@ DROP TABLE IF EXISTS Detritos;
 CREATE TABLE Detritos (
 	DetritoID INT NOT NULL UNIQUE,
 	Plot INT NOT NULL, # referencia a Conglomerados.PlotID
-	Transecto ENUM('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H') NOT NULL,
-	Seccion TINYINT NOT NULL, # 1, 2, 3
-	Pieza INT NOT NULL,
-	Tipo ENUM('DFM', 'DGM') NOT NULL,
-	Distancia FLOAT NOT NULL,
-	Azimut FLOAT NOT NULL, # grados 0-360
-	Diametro1 FLOAT NOT NULL, # cm
-	Diametro2 FLOAT, # cm
-	Inclinacion FLOAT NOT NULL,
+	Transecto ENUM('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H') DEFAULT NULL,
+	Seccion TINYINT DEFAULT NULL, # 1, 2, 3
+	Pieza INT DEFAULT NULL,
+	Tipo ENUM('DFM', 'DGM') DEFAULT NULL,
+	Distancia FLOAT DEFAULT NULL,
+	Azimut FLOAT DEFAULT NULL, # grados 0-360
+	Diametro1 FLOAT DEFAULT NULL, # cm
+	Diametro2 FLOAT DEFAULT NULL, # cm
+	Inclinacion FLOAT DEFAULT NULL,
 	PetrProf FLOAT DEFAULT NULL, # Profundidad en cm alcanzada por el penetrometro
 	PetrGolpes INT DEFAULT NULL, # Golpes ejercidos con el penetrometro
 	PesoRodaja FLOAT DEFAULT NULL, # Peso en gr
 	PesoMuestra FLOAT DEFAULT NULL, # Peso en gr
-	PesoSeco FLOAT NOT NULL, # Peso en gr
-	Espesor1 FLOAT NOT NULL, # longitud en cm
-	Espesor2 FLOAT, # longitud en cm
-	Espesor3 FLOAT, # longitud en cm
-	Espesor4 FLOAT, # longitud en cm
-	Volumen FLOAT, # ml
-	Densidad FLOAT, # gr / ml
+	PesoSeco FLOAT DEFAULT NULL, # Peso en gr
+	Espesor1 FLOAT DEFAULT NULL, # longitud en cm
+	Espesor2 FLOAT DEFAULT NULL, # longitud en cm
+	Espesor3 FLOAT DEFAULT NULL, # longitud en cm
+	Espesor4 FLOAT DEFAULT NULL, # longitud en cm
+	Volumen FLOAT DEFAULT NULL, # ml
+	Densidad FLOAT DEFAULT NULL, # gr / ml
 	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (DetritoID)
 	)
