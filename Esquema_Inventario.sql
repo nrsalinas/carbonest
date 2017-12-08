@@ -66,13 +66,13 @@ CREATE TABLE Tallos (
 DROP TABLE IF EXISTS Individuos;
 CREATE TABLE Individuos (
 	#
-	# Confirmar si el indice deberia ser AUTOINCREMENT
+	# Confirmar si el indice deberia ser AUTO_INCREMENT
 	#
-	IndividuoID INT NOT NULL,
-	Plot INT NOT NULL, # referencia a Conglomerados.PlotID
-	Subparcela TYNINT NOT NULL,
-	Azimut FLOAT NOT NULL,
-	Distancia FLOAT NOT NULL,
+	IndividuoID INT AUTO_INCREMENT NOT NULL,
+	Plot INT DEFAULT NULL, # referencia a Conglomerados.PlotID
+	Subparcela TINYINT DEFAULT NULL,
+	Azimut FLOAT DEFAULT NULL,
+	Distancia FLOAT DEFAULT NULL,
 	Dets INT DEFAULT NULL, # Historia de determinaciones, referencia a Determinaciones.DetID. Deben ser valores unicos por individuos vivos, NULL si es individuo muerto.
 	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (IndividuoID)
@@ -89,12 +89,9 @@ CREATE TABLE Taxonomia (
 	Fuente VARCHAR(255) NOT NULL DEFAULT 'Custodio', # Origen nombre.
 	Familia VARCHAR(255) DEFAULT NULL,
 	Genero VARCHAR(255) DEFAULT NULL,
-	AutorGenero VARCHAR(255) DEFAULT NULL,
 	Epiteto VARCHAR(255) DEFAULT NULL,
-	AutorEpiteto VARCHAR(255) DEFAULT NULL,
+	Autor VARCHAR(255) DEFAULT NULL,
 	SinonimoDe INT DEFAULT NULL, # Referencia a Taxonomia.TaxonID. Si es aceptado entonces NULL
-	Habito ENUM('Arborea', 'Palma', 'Liana', 'No arborea') DEFAULT NULL,
-	Origen ENUM('Nativa', 'Introducida') DEFAULT NULL,
 	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
 	PRIMARY KEY (TaxonID)
 	)
@@ -120,7 +117,7 @@ CREATE TABLE Conglomerados (
 	Region ENUM('Amazonia', 'Andes', 'Pacifico', 'Orinoquia', 'Caribe') NOT NULL,
 	Fecha YEAR, # Año toma de  datos
 	Socio VARCHAR(255),
-	SFP-C TINYINT NOT NULL, # Subparcelas donde se tomó la medición de Carbono ?????
+	SFPC TINYINT NOT NULL, # Subparcelas donde se tomó la medición de Carbono ?????
 	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (PlotID)
 	)
@@ -128,12 +125,15 @@ CREATE TABLE Conglomerados (
 
 DROP TABLE IF EXISTS Coordenadas;
 CREATE TABLE Coordenadas (
-	Plot INT # Referencia a Conglomerados.PlotID
-	SPF TINYINT NOT NULL;
-	Latitud Float NOT NULL;
-	Longitud FLOAT NOT NULL;
-	
-
+	Plot INT, # Referencia a Conglomerados.PlotID
+	SPF TINYINT DEFAULT NULL,
+	Latitud FLOAT DEFAULT NULL,
+	Longitud FLOAT DEFAULT NULL,
+	ZV FLOAT DEFAULT NULL,
+	ZonaVida VARCHAR(60) DEFAULT NULL,
+	Eq TINYINT DEFAULT NULL,
+	ChaveE FLOAT DEFAULT NULL,
+	PRIMARY KEY (Plot, SPF)
 	)
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
