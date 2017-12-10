@@ -165,7 +165,7 @@ CREATE TABLE Fuentes (
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
 
-/*
+
 # Foreign keys
 ALTER TABLE Detritos
 ADD FOREIGN KEY detr2plot (Plot)
@@ -196,4 +196,3 @@ ADD FOREIGN KEY dete2tax (Taxon)
 REFERENCES Taxonomia (TaxonID)
 ON DELETE RESTRICT
 ON UPDATE CASCADE;
-*/

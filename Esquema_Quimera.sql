@@ -8,23 +8,6 @@ CREATE DATABASE Quimera CHARACTER SET utf8 COLLATE utf8_bin;
 USE Quimera;
 
 
-/*
-DROP TABLE IF EXISTS Mediciones;
-CREATE TABLE Mediciones (
-	#
-	# Confirmar si el indice deberia ser AUTOINCREMENT
-	#
-	MedicionID INT NOT NULL UNIQUE,
-	Diametro FLOAT NOT NULL,
-	Altura FLOAT,
-	Individuo INT NOT NULL, # referencia a Individuos.IndividuoID
-	Year YEAR,
-	FechaMod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion o modificación del registro en la db
-	PRIMARY KEY (MedicionID)
-	)
-	ENGINE = INNODB DEFAULT CHARSET=UTF8;
-*/
-
 DROP TABLE IF EXISTS Individuos;
 CREATE TABLE Individuos (
 	IndividuoID INT NOT NULL,
@@ -125,7 +108,6 @@ CREATE TABLE Fuentes (
 #
 # Foreign keys. Habilitar despues de poblar las tablas.
 #
-/*
 ALTER TABLE Individuos
 ADD FOREIGN KEY ind2det (Dets)
 REFERENCES Determinaciones (DetID)
@@ -155,4 +137,3 @@ ADD FOREIGN KEY den2fuent (Fuente)
 REFERENCES Fuentes (FuenteID)
 ON DELETE RESTRICT
 ON UPDATE CASCADE;
-*/
