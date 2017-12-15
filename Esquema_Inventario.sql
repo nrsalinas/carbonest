@@ -1,3 +1,13 @@
+/*###########################################################
+Version 2:
+
+- Fuentes en Taxonomia son referencias a FuenteID en Fuentes
+
+- Primera fila en Fuentes es 'Socio', la fuente de toda la
+  informacion taxonomica inicial.
+
+###########################################################*/
+
 DROP DATABASE IF EXISTS IFN;
 CREATE DATABASE IFN CHARACTER SET utf8 COLLATE utf8_bin;
 
@@ -86,13 +96,13 @@ CREATE TABLE Taxonomia (
 	# Una especie puede tener varios valores de Habito???
 	#
 	TaxonID INT AUTO_INCREMENT NOT NULL,
-	Fuente VARCHAR(255) NOT NULL DEFAULT 'Custodio', # Origen nombre.
+	Fuente INT DEFAULT NULL, /* Origen nombre. Referencia a Fuentes.FuenteID */
 	Familia VARCHAR(255) DEFAULT NULL,
 	Genero VARCHAR(255) DEFAULT NULL,
 	Epiteto VARCHAR(255) DEFAULT NULL,
 	Autor VARCHAR(255) DEFAULT NULL,
-	SinonimoDe INT DEFAULT NULL, # Referencia a Taxonomia.TaxonID. Si es aceptado entonces NULL
-	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
+	SinonimoDe INT DEFAULT NULL, /* Referencia a Taxonomia.TaxonID. Si es aceptado entonces NULL */
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, /* Fecha de insercion del registro en la db */
 	PRIMARY KEY (TaxonID)
 	)
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;
@@ -137,11 +147,11 @@ CREATE TABLE Coordenadas (
 	)
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;
 
-###########################################################
+/*##########################################################
 # Las densidades son valores asignados a una categoria
 # taxonomica (especie, genero, familia, etc.). Un taxon
 # puede tener varios valores de densidad.
-###########################################################
+#########################################################*/
 DROP TABLE IF EXISTS Densidades;
 CREATE TABLE Densidades (
 	DensidadID INT AUTO_INCREMENT NOT NULL,
@@ -163,6 +173,9 @@ CREATE TABLE Fuentes (
 	PRIMARY KEY (FuenteID)
 	)
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;
+
+INSERT INTO Fuentes (FuenteID, Nombre, Acronimo, Year)
+	VALUES (1, 'Socio', 'Socio', 2017);
 
 
 
@@ -194,5 +207,11 @@ ON UPDATE CASCADE;
 ALTER TABLE Determinaciones
 ADD FOREIGN KEY dete2tax (Taxon)
 REFERENCES Taxonomia (TaxonID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Taxonomia
+ADD FOREIGN KEY tax2fuent (Fuente)
+REFERENCES Fuentes (FuenteID)
 ON DELETE RESTRICT
 ON UPDATE CASCADE;

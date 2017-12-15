@@ -27,17 +27,28 @@
 
 import pandas as pd
 import numpy as np
+import codecs as cd
+
+# Si el script es ejecutado interactivamente (como un cuaderno Jupyter, por ejemplo)
+# la variable `interactive` debe ser `True`, de lo contrario los reportes de error
+# serán guardados en un archivo de texto (`logfile`).
+interactive = True 
+
+# Archivo con reportes de error
+logfile = u"revisar.txt"
+
+logbuffer = u""
 
 # MySQL user and password
 password = u""
 user = u""
 
 # Asignar nombres de archivos a variables
-detritos = "../data/IFN/detritos.csv"
-ampie =  "../data/IFN/dasometricos/amp.csv"
-vegetacion = "../data/IFN/dasometricos/vegetacion.csv"
-generalInfo = "../data/IFN/informacion_general/informacion_general.csv"
-coordenadas = "../data/IFN/informacion_general/coordenadas.csv"
+detritos = u"../data/IFN/detritos.csv"
+ampie =  u"../data/IFN/dasometricos/amp.csv"
+vegetacion = u"../data/IFN/dasometricos/vegetacion.csv"
+generalInfo = u"../data/IFN/informacion_general/informacion_general.csv"
+coordenadas = u"../data/IFN/informacion_general/coordenadas.csv"
 
 # Leer archivos como Pandas dataframes
 det = pd.read_csv(detritos, encoding = 'utf8') 
@@ -79,6 +90,8 @@ DENS = u"DENS" # Densidad de madera de la muestra en gr/ml (float64)
 
 # In[ ]:
 
+logbuffer = u"\n" + u"#" * 50 + u"\nTABLA DETRITOS\n"
+
 # Convertir seccion muestreo de detritos a int64 para ahorrar espacio en memoria
 try:
     det[SECC].replace(to_replace = [u'I',u'II',u'III'], value = [1,2,3], inplace = True)
@@ -89,74 +102,86 @@ except:
 
 for fi in [CONS, PLOT, SECC]:
     if det[fi].dtype != np.int64:
-        print "Campo {0} tiene tipo inapropiado ({1} en vez de int64).".format(fi, det[fi].dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de int64).\n".format(fi, det[fi].dtype)
         if len(det[fi][det[fi].isna()]) > 1:
-            print "Valores nulos son considerados np.float64:"
-            print det[[fi, PLOT]][det[fi].isna()].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), 
-                                                       on=PLOT, rsuffix=u'_info')
+            logbuffer += u"\nValores nulos son considerados np.float64:\n"
+            logbuffer += det[[CONS, fi, PLOT, TRAN]][det[fi].isna()].join(info[[u'PLOT', u'SOCIO']
+                            ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False) + "\n"
         else:
-            print "Valores np.float64 a revisar:"
-            print det[fi][det[fi].map(lambda x: x % 1.0 != 0)].dropna()
-            
+            logbuffer += u"\nValores np.float64 a revisar:\n"
+            logbuffer += det[fi][det[fi].map(lambda x: x % 1.0 != 0)].dropna().to_string() + "\n"
         
 for fi in [AZIMUT, PIEZA, DIST, D1, D2, INCL, PI_cm, PESO_RODAJA, ESP1, ESP2, ESP3, ESP4, 
            PESO_MUESTRA, VOL, PESO_SECO, DENS, PI_golpes]:
     if det[fi].dtype != np.float64:
-        print "Campo {0} tiene tipo inapropiado ({1}en vez de float64).".format(fi, det[fi].dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1}en vez de float64).\n".format(fi, det[fi].dtype)
 
 for fi in [TRAN, TIPO]:
     non_unicode = det[fi].dropna()[~det[fi].dropna().apply(type).eq(unicode)]
     if len(non_unicode):
-        print "Campo {0} tiene tipo inapropiado ({1} en vez de unicode).".format(fi, non_strings.dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de unicode).\n".format(fi, non_strings.dtype)
+
+if interactive:
+    print logbuffer    
+    logbuffer = u""
 
 
 # In[ ]:
 
 # Indices no debe contener duplicado
 if len(det[det[CONS].duplicated()]):
-    print "Tabla {0} contiene indices duplicados.".format(detritos)
+    logbuffer += u"\nTabla {0} contiene indices duplicados.\n".format(detritos)
         
 if len(det[det[TRAN].isna()]):
-    print "Piezas de detritos no tienen transecto:"
-    print det[[PLOT, CONS, TRAN]][det[TRAN].isna()].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), 
-                                                         on=PLOT, rsuffix=u'_info')
+    logbuffer += u"\nPiezas de detritos no tienen transecto:\n"
+    logbuffer += det[[CONS, PLOT, TRAN]][det[TRAN].isna()].join(info[[u'PLOT', u'SOCIO'
+                    ]].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index= False) + "\n"
 # Piezas sin datos de transecto son eliminadas
 det.drop(det[det[TRAN].isna()].index, inplace=True)
         
 for tr in det[TRAN].dropna().unique():
     if tr not in [u'A', u'B', u'C', u'D', u'E', u'F', u'G', u'H']:
-        print "`{0}` no es un valor valido de transecto de detrito".format(tr)
+        logbuffer += u"\n`{0}` no es un valor valido de transecto de detrito\n".format(tr)
         
 for tr in det[SECC].dropna().unique():
     if tr not in [1,2,3]:
-        print "`{0}` no es un valor valido de transecto de detrito".format(tr)
+        logbuffer += u"\n`{0}` no es un valor valido de transecto de detrito\n".format(tr)
 
 for tr in det[TIPO].dropna().unique():
     if tr not in [u'DFM', u'DGM']:
-        print "`{0}` no es un valor valido de tipo de detrito".format(tr)
+        logbuffer += u"\n`{0}` no es un valor valido de tipo de detrito\n".format(tr)
+        
+#############################################################################################
+# Antes de verificar la asignacion del tipo de detrito los diámetros observados
+# iguales a cero son declarados como datos faltantes
+#############################################################################################
+det.loc[det[D1] == 0, D1] = np.nan
+det.loc[det[D2] == 0, D2] = np.nan
         
 if len(det[(det[TIPO] == u'DFM') & (((det[D1] >= 20) & (det[D2].isna())) | (det[D1] + det[D2] >= 40))]):
-    print "Tipo de detrito probablemente mal asignado"
-    print det[[TIPO, D1, D2, PLOT]][(det[TIPO] == u'DFM') & (((det[D1] >= 20) & (det[D2].isna()))
-            | (det[D1] + det[D2] >= 40))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), 
-            on=PLOT, rsuffix=u'_info')
+    logbuffer += u"\nTipo de detrito probablemente mal asignado\n"
+    logbuffer += det[[CONS, TIPO, D1, D2, PLOT, TRAN]][(det[TIPO] == u'DFM') & (((det[D1] >= 20) 
+                    & (det[D2].isna())) | (det[D1] + det[D2] >= 40))].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index = 
+                    False) + "\n"
     det.loc[(det[TIPO] == u'DFM') & (((det[D1] >= 20) & (det[D2].isna())) | (det[D1] + det[D2] >= 40)
         ), TIPO] = u'DGM'
 
 if len(det[(det[TIPO] == u'DGM') & (((det[D1] < 20) & (det[D2].isna())) | (det[D1] + det[D2] < 40))]):
-    print "Tipo de detrito probablemente mal asignado"
-    print det[[TIPO, D1, D2, PLOT]][(det[TIPO] == u'DGM') & (((det[D1] < 20) & (det[D2].isna())) 
-            | (det[D1] + det[D2] < 40))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), 
-            on=PLOT, rsuffix=u'_info')
+    logbuffer += u"\nTipo de detrito probablemente mal asignado\n"
+    logbuffer += det[[CONS, TIPO, D1, D2, PLOT, TRAN]][(det[TIPO] == u'DGM') & (((det[D1] < 20) 
+                    & (det[D2].isna())) | (det[D1] + det[D2] < 40))].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index = 
+                    False) + "\n"
     det.loc[(det[TIPO] == u'DGM') & (((det[D1] < 20) & (det[D2].isna())) | (det[D1] + det[D2] < 40)),
             TIPO] = u'DFM'
 
 if det[DIST].min() < 0:
-    print "Rango distancia tiene valores negativos."
+    logbuffer += u"\nRango distancia tiene valores negativos.\n"
 if det[DIST].max() > 10:
-    print "Rango distancia sobrepasa el valor permitido (10)."
-    print det[[DIST, PLOT]][det[DIST] > 10].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
-            rsuffix=u'_info')
+    logbuffer += u"\nRango distancia sobrepasa el valor permitido (10).\n"
+    logbuffer += det[[CONS, DIST, PLOT, TRAN]][det[DIST] > 10].join(info[[u'PLOT', u'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False) + "\n"
     
     
 ##############################################
@@ -185,14 +210,15 @@ det.loc[(det[DIST] > 20) & (det[DIST] <= 30), DIST] = det[(det[DIST] > 20) & (de
 det.loc[det[DIST] > 30, DIST] = det[det[DIST] > 30][DIST] / 10
 
 if len(det[(det[TIPO] == u'DFM') & (det[DIST] > 1) & (det[DIST] < 9)]):
-    print "Detritos finos contienen valores no permitidos de distancia:"
-    print det[[TIPO, DIST, PLOT]][(det[TIPO] == u'DFM') & (det[DIST] > 1) & (det[DIST] < 9)
-            ].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    logbuffer += u"\nDetritos finos contienen valores no permitidos de distancia:\n"
+    logbuffer += det[[CONS, TIPO, DIST, PLOT, TRAN]][(det[TIPO] == u'DFM') & (det[DIST] > 1)
+                    & (det[DIST] < 9)].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
+                    rsuffix=u'_info').to_string(index = False) + "\n"
 
 if det[AZIMUT].min() < 0:
-    print "Rango Azimut tiene valores negativos."
+    logbuffer += u"\nRango Azimut tiene valores negativos.\n"
 if det[AZIMUT].max() > 360:
-    print "Rango Azimut sobrepasa el valor permitido (360)"
+    logbuffer += u"\nRango Azimut sobrepasa el valor permitido (360)\n"
 
 #####################################################
 # Valores dudosos de diametro
@@ -201,69 +227,84 @@ det[D2].replace(to_replace = 0.0, value = np.nan, inplace = True)
 
 # Detritos con diametro menor a 2 cm son eliminados
 if len(det[(det[D1] + det[D2]) < 4]):
-    print "Rango de diametro tiene valores inferiores a 2 cm."
-    print det[[D1, D2, PLOT]][(det[D1] + det[D2]) < 4].join(info[[u'PLOT', u'SOCIO']
-            ].set_index(PLOT), on=PLOT, rsuffix=u'_info')
-det.drop(det[(det[D1] + det[D2]) < 4].index, inplace=True)
+    logbuffer += u"\nRango de diametro tiene valores inferiores a 2 cm.\n"
+    logbuffer += det[[CONS, D1, D2, PLOT, TRAN]][(det[D1] + det[D2]) < 4].join(info[[
+                    u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(
+                    index=False) + "\n"
+    det.drop(det[(det[D1] + det[D2]) < 4].index, inplace=True)
     
 #
 # ¿Como tratar los valores de inclinación? ¿Están simplemente desfazados 90 grados?
 #   
 if det[INCL].min() < -90:
-    print "Rango inclinacion tiene valores menores al valor permitido (-90)."
-    print det[INCL][det[INCL] < -90]
+    logbuffer += u"\nRango inclinacion tiene valores menores al valor permitido (-90).\n"
+    logbuffer += det[[CONS, INCL, PLOT, TRAN]][det[INCL] < -90].join(info[[u'PLOT', u'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False) + "\n"
 if det[INCL].max() > 90:
-    print "Rango inclinacion sobrepasa el valor permitido (90)"
-    print det[INCL][det[INCL] > 90]
+    logbuffer += u"\nRango inclinacion sobrepasa el valor permitido (90)\n"
+    logbuffer += det[[CONS, INCL, PLOT, TRAN]][det[INCL] > 90].join(info[[u'PLOT', u'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False) + "\n"
     
 if det[PI_cm].min() < 0:
-    print "Hay valores negativos de entrada del penetrometro."
+    logbuffer += u"\nHay valores negativos de entrada del penetrometro.\n"
 if det[PI_cm].max() > 20:
-    print "Valores maximos del entrada del penetrometro mayores al valor sugerido en el manual:"
+    logbuffer += u"\nValores maximos del entrada del penetrometro mayores al valor sugerido en el manual:\n"
     #print det[[PI_cm, D1, D2]][det[PI_cm] > 20]
-    print det[[PI_cm, PLOT]][det[PI_cm] > 20].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), 
-            on=PLOT, rsuffix=u'_info')
+    logbuffer += det[[CONS, PI_cm, PLOT, TRAN]][det[PI_cm] > 20].join(info[[u'PLOT', u'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False) + "\n"
     # Valores mayores a 20 cm son ajustados a 20 cm
     det.loc[det[PI_cm] > 20 , PI_cm] = 20
 
 if len(det[PI_cm][(det[PI_cm] > det[D1]) | (det[PI_cm] > det[D2])]):
-    print "Valores de entrada del penetrómetro son mayores al diametro registrado:"
-    print det[[PI_cm, D1, D2, PLOT]][(det[PI_cm] > det[D1]) | (det[PI_cm] > det[D2])].join(
-            info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    logbuffer += u"\nValores de entrada del penetrometro son mayores al diametro registrado:\n"
+    logbuffer += det[[CONS, PI_cm, D1, D2, PLOT, TRAN]][(det[PI_cm] > det[D1]) | (det[PI_cm] 
+                    > det[D2])].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
+                    rsuffix=u'_info').to_string(index=False) + "\n"
 
 if det[PI_golpes].min() < 0:
-    print "Valores negativos de golpes al penetrometro."
+    logbuffer += u"\nValores negativos de golpes al penetrometro.\n"
 if det[PI_golpes].max() > 25:
-    print "Valores maximos de golpes del penetrometro son dudosos:"
-    print det[[PI_golpes, PLOT]][det[PI_golpes] > 20].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), 
-            on=PLOT, rsuffix=u'_info')
+    logbuffer += u"\nValores maximos de golpes del penetrometro son dudosos:\n"
+    logbuffer += det[[CONS, PI_golpes, PLOT, TRAN]][det[PI_golpes] > 20].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index = 
+                    False) + "\n"
     
 # Sets de valores de espesor de pieza son dudosos si la desviacion estandar es mayor a 0.3 
 # la media del set
 if len(det[(det[[ESP1, ESP2, ESP3, ESP4]].std(1) / det[[ESP1, ESP2, ESP3, ESP4]].mean(1)) > 0.3]):
-    print "Algunos conjuntos de espesor de pieza tienen una variacion muy alta:"
-    print det[[ESP1, ESP2, ESP3, ESP4, PLOT]][(det[[ESP1, ESP2, ESP3, ESP4]].std(1) / det[[ESP1, 
-                ESP2, ESP3, ESP4]].mean(1)) > 0.3].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), 
-                on=PLOT, rsuffix=u'_info')
+    logbuffer += u"\nAlgunos conjuntos de espesor de pieza tienen una variacion muy alta:\n"
+    logbuffer += det[[CONS, ESP1, ESP2, ESP3, ESP4, PLOT, TRAN]][(det[[ESP1, ESP2, ESP3, ESP4]
+                    ].std(1) / det[[ESP1, ESP2, ESP3, ESP4]].mean(1)) > 0.3].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index =
+                    False) + "\n"
     
 if det[(det[PESO_MUESTRA] < det[PESO_SECO]) | (det[PESO_MUESTRA].isna() & (det[PESO_RODAJA] < 
         det[PESO_SECO]))].size:
-    print "Peso fresco es menor al peso seco:"
-    print det[[PESO_MUESTRA, PESO_RODAJA, PESO_SECO, PLOT]][(det[PESO_MUESTRA] < det[PESO_SECO]) 
-            | (det[PESO_MUESTRA].isna() & (det[PESO_RODAJA] < det[PESO_SECO]))].join(info[[u'PLOT', 
-            u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    logbuffer += u"\nPeso fresco es menor al peso seco:\n"
+    logbuffer += det[[CONS, PESO_MUESTRA, PESO_RODAJA, PESO_SECO, PLOT, TRAN]][(det[PESO_MUESTRA] 
+                    < det[PESO_SECO]) | (det[PESO_MUESTRA].isna() & (det[PESO_RODAJA] < 
+                    det[PESO_SECO]))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
+                    rsuffix=u'_info').to_string(index = False) + "\n"
 
 if det[(det[PESO_MUESTRA] > det[PESO_RODAJA])].size:
-    print "Peso del fragmento muestreado es mayor al de la rodaja:"
-    print det[[TIPO, PESO_MUESTRA, PESO_RODAJA, PESO_SECO, PLOT]][(det[PESO_MUESTRA] > 
-            det[PESO_RODAJA])].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
-            rsuffix=u'_info')
+    logbuffer += u"\nPeso del fragmento muestreado es mayor al de la rodaja:\n"
+    logbuffer += det[[CONS, TIPO, PESO_MUESTRA, PESO_RODAJA, PESO_SECO, PLOT, TRAN]][
+                    (det[PESO_MUESTRA] > det[PESO_RODAJA])].join(info[[u'PLOT', u'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False) + "\n"
     
 if det[det[PESO_MUESTRA].isna() & det[PESO_RODAJA].isna()].size:
-    print "Falta peso fresco de detrito:"
-    print det[[TIPO, PESO_MUESTRA, PESO_RODAJA, PESO_SECO, PLOT]][det[PESO_MUESTRA].isna() & 
-            det[PESO_RODAJA].isna()].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
-            rsuffix=u'_info')
+    logbuffer += u"\nFalta peso fresco de detrito:\n"
+    logbuffer += det[[CONS, TIPO, PESO_MUESTRA, PESO_RODAJA, PESO_SECO, PLOT, TRAN]][
+                    det[PESO_MUESTRA].isna() & det[PESO_RODAJA].isna()].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index
+                    = False) + "\n"
+    
+if interactive:
+    print logbuffer 
+else:
+    with cd.open(logfile, mode='w', encoding="utf-8") as fhandle:
+        fhandle.write(logbuffer)
+logbuffer = u""
 
 
 # # Vegetacion
@@ -293,111 +334,158 @@ FUENTE_DENSIDAD = u"FUENTE_DENSIDAD" # Referencia bibliografica de la densidad d
 
 # In[ ]:
 
+logbuffer = u"\n" + u"#" * 50 + u"\nTABLA VEGETACION\n"
 for fi in [CONS, PLOT, SPF, IND]:
     if veg[fi].dtype != np.int64:
-        print "\nCampo {0} tiene tipo inapropiado ({1} en vez de int64).".format(fi, veg[fi].dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de int64).\n".format(fi, veg[fi].dtype)
         if len(veg[fi][det[fi].isna()]) > 1:
-            print "Valores nulos son considerados np.float64:"
-            print veg[[fi, PLOT]][veg[fi].isna()].join(info[['PLOT', 'SOCIO']].set_index(PLOT), 
-                                                       on=PLOT, rsuffix='_info')
+            logbuffer += u"\nValores nulos son considerados np.float64:\n"
+            logbuffer += veg[[CONS, fi, PLOT, SPF]][veg[fi].isna()].join(info[['PLOT',
+                            'SOCIO']].set_index(PLOT), on=PLOT, rsuffix='_info').to_string(
+                            index = False) + "\n"
         else:
-            print "Valores np.float64 a revisar:"
-            print veg[fi][veg[fi].map(lambda x: x % 1.0 != 0)].dropna()
+            logbuffer += u"\nValores np.float64 a revisar:\n"
+            logbuffer += veg[CONS, fi, PLOT, SPF][veg[fi].map(lambda x: x % 1.0 != 0)].dropna(
+                            ).merge(info[['PLOT', 'SOCIO']], on=PLOT).to_string(index = False
+                            ) + "\n"
             
         
 for fi in [AZIMUT, DIST, DAP1, DAP2, DAPA, ALTT, ALTF, DENS]:
     if veg[fi].dtype != np.float64:
-        print "\nCampo {0} tiene tipo inapropiado ({1}en vez de float64).".format(fi, veg[fi].dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1}en vez de float64).\n".format(fi, veg[fi].dtype)
 
 for fi in [FAMILIA, GENERO, EPITETO, AUTOR, ESPECIE, FUENTE_DENSIDAD, TAMANO]:
     non_strings = veg[fi].dropna()[~veg[fi].dropna().apply(type).eq(unicode)]
     if len(non_strings):
-        print "\nCampo {0} tiene tipo inapropiado ({1} en vez de unicode).".format(fi, non_strings.dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de unicode).\n".format(fi, non_strings.dtype)
+
+if interactive:
+    print logbuffer 
+    logbuffer = u""
 
 
 # In[ ]:
 
 if len(veg[veg[CONS].duplicated()]):
-    print "\nTabla {0} contiene indices duplicados.".format(vegetacion)
+    logbuffer += u"\nTabla {0} contiene indices duplicados.\n".format(vegetacion)
 
 for spf in veg[SPF].unique():
     if spf not in range(1,6):
-        print "\nValor no valido de parcela: {0}".format(spf)
+        logbuffer += u"\nValor no valido de parcela: {0}\n".format(spf)
         
 for tam in veg[TAMANO].unique():
     if tam not in [u'B', u'L', u'F', u'FG']:
-        print "\nValor no valido de tamaño de individuo: {0}".format(tam)
+        logbuffer += u"\nValor no valido de tamaño de individuo: {0}\n".format(tam)
         
 if veg[AZIMUT].min() < 0:
-    print "\nAzimut contiene valores no aceptados."
+    logbuffer += u"\nAzimut contiene valores no aceptados.\n"
 if veg[AZIMUT].max() > 360:
-    print "\nAzimut contiene valores no aceptados."
+    logbuffer += u"\nAzimut contiene valores no aceptados.\n"
     
 # Verificar asignacion de clases diametricas
 if len(veg[(veg[TAMANO] != u'B') & ((veg[DAPA] < 2.5) | ((veg[DAP1] + veg[DAP2]) < 5.0))]):
-    print "\nBrinzales están asignados a categoria erronea:"
-    print veg[[PLOT, TAMANO, DAPA, DAP1, DAP2]][(veg[TAMANO] != u'B') & ((veg[DAPA] < 2.5) 
-            | ((veg[DAP1] + veg[DAP2]) < 5.0))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT),
-            on=PLOT, rsuffix=u'_info')
+
+    logbuffer += u"\nBrinzales están asignados a categoria erronea:\n"
+
+    logbuffer += veg[[CONS, PLOT, SPF, TAMANO, DAPA, DAP1, DAP2]][(veg[TAMANO] != u'B') 
+                    & ((veg[DAPA] < 2.5) | ((veg[DAP1] + veg[DAP2]) < 5.0))].join(
+                    info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix = 
+                    u'_info').to_string(index=False) + "\n"
+
     veg.loc[(veg[TAMANO] != u'B') & ((veg[DAPA] < 2.5) | ((veg[DAP1] + veg[DAP2]) < 5.0)), 
         TAMANO] = u'B'
     
 if len(veg[(veg[TAMANO] != u'L') & (((veg[DAPA] < 10) & (veg[DAPA] >= 2.5)) | (((veg[DAP1] + 
         veg[DAP2]) < 20) & ((veg[DAP1] + veg[DAP2]) >= 5.0)))]):
-    print "\nLatizales están asignados a categoria erronea:"
-    print veg[[PLOT, TAMANO, DAPA, DAP1, DAP2]][(veg[TAMANO] != u'L') & (((veg[DAPA] < 10) & 
-            (veg[DAPA] >= 2.5)) | (((veg[DAP1] + veg[DAP2]) < 20) & ((veg[DAP1] + 
-            veg[DAP2]) >= 5.0)))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
-            rsuffix=u'_info')
+    
+    logbuffer += u"\nLatizales están asignados a categoria erronea:\n"
+    
+    logbuffer += veg[[CONS, PLOT, SPF, TAMANO, DAPA, DAP1, DAP2]][(veg[TAMANO] != u'L') 
+                    & (((veg[DAPA] < 10) & (veg[DAPA] >= 2.5)) | (((veg[DAP1] + veg[DAP2]) < 20) 
+                    & ((veg[DAP1] + veg[DAP2]) >= 5.0)))].join(info[[u'PLOT', u'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index= False
+                    ) + "\n"
+    
     veg.loc[(veg[TAMANO] != u'L') & (((veg[DAPA] < 10) & (veg[DAPA] >= 2.5)) | (((veg[DAP1] 
             + veg[DAP2]) < 20) & ((veg[DAP1] + veg[DAP2]) >= 5.0))), TAMANO] = u'L'
     
 if len(veg[(veg[TAMANO] != u'F') & (((veg[DAPA] < 30) & (veg[DAPA] >= 10)) | (((veg[DAP1] + 
         veg[DAP2]) < 60) & ((veg[DAP1] + veg[DAP2]) >= 20)))]):
-    print "\nFustales están asignados a categoria erronea:"
-    print veg[[PLOT, TAMANO, DAPA, DAP1, DAP2]][(veg[TAMANO] != u'F') & (((veg[DAPA] < 30) & 
-            (veg[DAPA] >= 10)) | (((veg[DAP1] + veg[DAP2]) < 60) & ((veg[DAP1] + 
-            veg[DAP2]) >= 20)))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
-            rsuffix=u'_info')
+    
+    logbuffer += u"\nFustales están asignados a categoria erronea:\n"
+    
+    logbuffer += veg[[CONS, PLOT, SPF, TAMANO, DAPA, DAP1, DAP2]][(veg[TAMANO] != u'F') 
+                    & (((veg[DAPA] < 30) & (veg[DAPA] >= 10)) | (((veg[DAP1] + veg[DAP2]) < 60) 
+                    & ((veg[DAP1] + veg[DAP2]) >= 20)))].join(info[[u'PLOT', u'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False
+                    ) + "\n"
+    
     veg.loc[(veg[TAMANO] != u'F') & (((veg[DAPA] < 30) & (veg[DAPA] >= 10)) | (((veg[DAP1]
         + veg[DAP2]) < 60) & ((veg[DAP1] + veg[DAP2]) >= 20))) , TAMANO] = u'F'
     
 if len(veg[(veg[TAMANO] != u'FG') & ((veg[DAPA] >= 30) | ((veg[DAP1] + veg[DAP2]) >= 60))]):
-    print "\nFustales grandes están asignados a categoria erronea:"
-    print veg[[PLOT, TAMANO, DAPA, DAP1, DAP2]][(veg[TAMANO] != u'FG') & ((veg[DAPA] >= 30) 
-            | ((veg[DAP1] + veg[DAP2]) >= 60))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT),
-            on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nFustales grandes están asignados a categoria erronea:\n"
+    
+    logbuffer += veg[[CONS, PLOT, SPF, TAMANO, DAPA, DAP1, DAP2]][(veg[TAMANO] != u'FG') 
+                    & ((veg[DAPA] >= 30) | ((veg[DAP1] + veg[DAP2]) >= 60))].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=
+                    False) + "\n"
 
 # Verificar si las distancias corresponden a las categorias de edad.
 # Latizales y Fustales afuera de su area de medición son eliminados
 if len(veg[(veg[DIST] > 3) & (veg[TAMANO] == u'L')]):
-    print "\nLatizales registrados afuera del area aceptada:"
-    print veg[[TAMANO, DIST, DAPA, PLOT]][(veg[DIST] > 3) & (veg[TAMANO] == u'L')].join(info[[
-            u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix='_info')
+    
+    logbuffer += u"\nLatizales registrados afuera del area aceptada:\n"
+    
+    logbuffer += veg[[CONS, TAMANO, DIST, DAPA, PLOT, SPF]][(veg[DIST] > 3) & (veg[TAMANO] 
+                    == u'L')].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
+                    rsuffix='_info').to_string(index=False) + "\n"
+    
     veg.drop(veg[(veg[DIST] > 3) & (veg[TAMANO] == u'L')].index, inplace=True)
     
 if len(veg[(veg[DIST] > 7) & (veg[TAMANO] == u'F')]):
-    print "\nFustales registrados afuera del area aceptada:"
-    print veg[[TAMANO, DIST, DAPA, PLOT]][(veg[DIST] > 7) & (veg[TAMANO] == u'F')].join(info[[
-            u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nFustales registrados afuera del area aceptada:\n"
+    
+    logbuffer += veg[[CONS, TAMANO, DIST, DAPA, PLOT, SPF]][(veg[DIST] > 7) & (veg[TAMANO] 
+                    == u'F')].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
+                    rsuffix=u'_info').to_string(index=False) + "\n"
+    
     veg.drop(veg[(veg[DIST] > 7) & (veg[TAMANO] == u'F')].index, inplace=True)
     
 if len(veg[veg[DIST] > 15]):
-    print "\nIndividuos registrados afuera del area de la subparcela:"
-    print veg[[TAMANO, DIST, DAPA, PLOT]][veg[DIST] > 15].join(info[[u'PLOT', u'SOCIO']]
-            .set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nIndividuos registrados afuera del area de la subparcela:\n"
+    
+    logbuffer += veg[[CONS, TAMANO, DIST, DAPA, PLOT, SPF]][veg[DIST] > 15].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=
+                    False) + "\n"
 
 # Verificar estimacion DAP promedio
 if veg[((veg[DAP1] + veg[DAP2]) - (veg[DAPA] * 2)) > 0.1].size:
-    print "\nErrores en la estimación del DAP promedio?:"
-    print veg[[DAPA, DAP1, DAP2, PLOT]][((veg[DAP1] + veg[DAP2]) - (veg[DAPA] * 2)) > 
-            0.01].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nErrores en la estimación del DAP promedio?:\n"
+    
+    logbuffer += veg[[CONS, DAPA, DAP1, DAP2, PLOT, SPF]][((veg[DAP1] + veg[DAP2]) - 
+                    (veg[DAPA] * 2)) > 0.01].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT),
+                    on=PLOT, rsuffix=u'_info').to_string(index=False) + "\n"
 
 # Altura total siempre debe ser mayor a la altura del fuste
 if veg[veg[ALTF] > veg[ALTT]].size:
-    print "\nIndividuos con altura del fuste mayor a la altura total:"
-    print veg[[ALTF, ALTT, PLOT]][veg[ALTF] > veg[ALTT]].join(info[[u'PLOT', u'SOCIO']]
-            .set_index(PLOT), on = PLOT, rsuffix = u'_info')
+    
+    logbuffer += u"\nIndividuos con altura del fuste mayor a la altura total:"
+    
+    logbuffer += veg[[CONS, ALTF, ALTT, PLOT, SPF]][veg[ALTF] > veg[ALTT]].join(info[[u'PLOT',
+                    u'SOCIO']].set_index(PLOT), on = PLOT, rsuffix = u'_info').to_string(index
+                    =False) + "\n"
+
+if interactive:
+    print logbuffer 
+else:
+    with cd.open(logfile, mode='a', encoding="utf-8") as fhandle:
+        fhandle.write(logbuffer)
+logbuffer = u""
 
 
 # # Informacion general
@@ -419,21 +507,22 @@ DETR = u'DETR' # Toma de detritos ????????? (str: 'Si', 'No'). Deberia ser boole
 
 # In[ ]:
 
+logbuffer = u"\n" + u"#" * 50 + u"\nTABLA INFORMACION GENERAL\n"
 # Verificar el tipo de dato an cada campo de la tabla informacion general
 for fi in [CONS, PLOT, FECHA_CAMPO, SPFC]:
     if info[fi].dtype != np.int64:
-        print "Campo {0} tiene tipo inapropiado ({1} en vez de int64).".format(fi, veg[fi].dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de int64).\n".format(fi, veg[fi].dtype)
         if len(info[fi][det[fi].isna()]) > 1:
-            print "Valores nulos son considerados np.float64:"
-            print info[[fi, PLOT, SOCIO]]
+            logbuffer += u"\nValores nulos son considerados np.float64:\n"
+            logbuffer += info[[fi, PLOT, SOCIO]][det[fi].isna()].to_string()
         else:
-            print "Valores np.float64 a revisar:"
-            print info[fi][info[fi].map(lambda x: x % 1.0 != 0)].dropna()
+            logbuffer += u"\nValores np.float64 a revisar:\n"
+            logbuffer += info[fi][info[fi].map(lambda x: x % 1.0 != 0)].dropna().to_string()
             
 for fi in [DEPARTAMENTO, REGION, SOCIO]:
     non_strings = info[fi].dropna()[~info[fi].dropna().apply(type).eq(unicode)]
     if len(non_strings):
-        print "Campo {0} tiene tipo inapropiado ({1} en vez de unicode).".format(fi, non_strings.dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de unicode).\n".format(fi, non_strings.dtype)
 
 ###########################################
 # Se asume que los campos BOT_TOT, fertilidad y detritos son boolean en ves de texto
@@ -451,25 +540,37 @@ except:
     
 for fi in [BOT_TOT, DETR, FERT, CARB]:
     if info[fi].dtype != np.bool:
-        print "Campo {0} tiene tipo inapropiado ({1} en vez de np.bool).".format(fi, veg[fi].dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de np.bool).\n".format(fi, veg[fi].dtype)
+        
+if interactive:
+    print logbuffer 
+    logbuffer = u""
 
 
 # In[ ]:
 
 # Verificar rango de datos
 if len(info[info[CONS].duplicated()]):
-    print "Tabla {0} contiene indices duplicados.".format(generalInfo)
+    logbuffer += u"\nTabla {0} contiene indices duplicados.\n".format(generalInfo)
 
 for spf in info[SPFC].unique():
     if spf not in range(1,6):
-        print "\nValor no valido de parcela: {0}".format(spf)
-        print info[[PLOT, SPFC, SOCIO]][info[SPFC] == spf]
+        logbuffer += u"\nValor no valido de parcela: {0}\n".format(spf)
+        logbuffer += info[[PLOT, SPFC, SOCIO]][info[SPFC] == spf].to_string(index = False)
         info.drop(info[info[SPFC] == spf].index, inplace=True)
 
 if len(info[info[DETR].isna() | info[CARB].isna() | info[BOT_TOT].isna() | info[FERT].isna()]):
-    print "\nDatos faltantes en columna Detritos, Carbono, Fertilidad o BOT_TOT:"
-    print info[[DETR, CARB, BOT_TOT, FERT, PLOT, SOCIO]][info[DETR].isna() | info[CARB].isna() | 
-            info[BOT_TOT].isna() | info[FERT].isna()]
+    logbuffer += u"\nDatos faltantes en columna Detritos, Carbono, Fertilidad o BOT_TOT:\n"
+    logbuffer += info[[DETR, CARB, BOT_TOT, FERT, PLOT, SPFC, SOCIO]][info[DETR].isna() | 
+                    info[CARB].isna() | info[BOT_TOT].isna() | info[FERT].isna()].to_string(
+                    index=False)
+        
+if interactive:
+    print logbuffer 
+else:
+    with cd.open(logfile, mode='a', encoding="utf-8") as fhandle:
+        fhandle.write(logbuffer)
+logbuffer = u""
 
 
 # # Árboles muertos en pie
@@ -500,145 +601,215 @@ PI_golpes = u'Pi_golpes' # Golpes ejecutados con el penetrometro (float64). Por 
 
 # In[ ]:
 
+logbuffer = u"\n" + u"#" * 50 + u"\nTABLA ARBOLES MUERTOS EN PIE\n"
 for fi in [CONS, PLOT, SPF, IND, AZIMUT]:
     if amp[fi].dtype != np.int64:
-        print "\nCampo {0} tiene tipo inapropiado ({1} en vez de int64).".format(fi, amp[fi].dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de int64).\n".format(
+                        fi, amp[fi].dtype)
         if len(amp[fi][amp[fi].isna()]) > 1:
-            print "Los siguentes valores nulos son considerados np.float64 por Pandas:"
-            print amp[[fi, PLOT]][amp[fi].isna()]
+            logbuffer += u"\nLos siguentes valores nulos son considerados np.float64 por Pandas:\n"
+            logbuffer += amp[[fi, PLOT, SPF]][amp[fi].isna()].merge(info[[PLOT, SOCIO]], 
+                            on=PLOT, how='left').to_string(index=False)
         else:
-            print "Valores np.float64 a revisar:"
-            print amp[fi][amp[fi].map(lambda x: x % 1.0 != 0)].dropna()
+            logbuffer += u"\nValores np.float64 a revisar:\n"
+            logbuffer += amp[[fi, PLOT, SPF]][amp[fi].map(lambda x: x % 1.0 != 0)].dropna().merge(
+                            info[[PLOT, SOCIO]], on=PLOT, how='left').to_string(index=False)
             
 for fi in [DIST, DAP1, DAP2, DAPA, POM, ALTF, ALTT, PI_cm, PI_golpes]:
     if amp[fi].dtype != np.float64:
-        print "\nCampo {0} tiene tipo inapropiado ({1} en vez de float64).".format(fi, amp[fi].dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de float64)\n.".format(
+                        fi, amp[fi].dtype)
         
         
 for fi in [TAMANO, COND, DAP_EQUIPO, ALT_EQUIPO, FORMA_FUSTE, DANO]:
     non_strings = amp[fi].dropna()[~amp[fi].dropna().apply(type).eq(unicode)]
     if len(non_strings):
-        print "\nCampo {0} tiene tipo inapropiado ({1} en vez de unicode).".format(fi, non_strings.dtype)
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de unicode).\n".format(
+                        fi, non_strings.dtype)
 
+if interactive:
+    print logbuffer 
+    logbuffer = u""
 
 
 # In[ ]:
 
 if len(amp[amp[CONS].duplicated()]):
-    print "Tabla {0} contiene indices duplicados.".format(ampie)
+
+    logbuffer += u"\nTabla {0} contiene indices duplicados.\n".format(ampie)
 
 vym = pd.concat( [veg[CONS],amp[CONS]]) # Indices de vivos y muertos en pie
+
 if len(vym[vym.duplicated()]):
-    print "Existen indices duplicados en las tablas {0} y {1}.".format(veg, ampie)
+    
+    logbuffer += u"\nExisten indices duplicados en las tablas {0} y {1}.\n".format(veg, ampie)
 
 for spf in amp[SPF].unique():
+    
     if spf not in range(1,6):
-        print "\nValor no valido de parcela: {0}".format(spf)
-        print amp[[PLOT, SPF]][amp[SPF] == spf]
+        
+        logbuffer += u"\nValor no valido de parcela: {0}\n".format(spf)
+        
+        logbuffer += amp[[SPF, PLOT]][amp[SPF] == spf].merge(info[[PLOT, SOCIO]], 
+                        on=PLOT, how='left').to_string(index=False) + u"\n"
+        
         amp.drop(amp[amp[SPF] == spf].index, inplace=True)
 
 for tam in amp[TAMANO].unique():
+    
     if tam not in [u'L', u'F', u'FG']:
-        print "Valor no valido de tamaño de individuo: {0}".format(tam)
+        
+        logbuffer += u"\nValor no valido de tamaño de individuo: {0}\n".format(tam)
         
 if amp[AZIMUT].min() < 0:
-    print "Azimut contiene valores no aceptados."
+
+    logbuffer += u"\nAzimut contiene valores no aceptados.\n"
+
 if amp[AZIMUT].max() > 360:
-    print "Azimut contiene valores no aceptados."
+
+    logbuffer += u"\nAzimut contiene valores no aceptados.\n"
     
 # Verificar asignacion de clases diametricas
 if len(amp[(amp[TAMANO] != u'B') & ((amp[DAPA] < 2.5) | ((amp[DAP1] + amp[DAP2]) < 5.0))]):
-    print "Brinzales están asignados a categoria erronea:"
-    print amp[[PLOT, TAMANO, DAPA, DAP1, DAP2]][(amp[TAMANO] != u'B') & ((amp[DAPA] < 2.5) 
-            | ((amp[DAP1] + amp[DAP2]) < 5.0))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT),
-            on=PLOT, rsuffix=u'_info')
+
+    logbuffer += u"\nBrinzales están asignados a categoria erronea:\n"
+
+    logbuffer += amp[[PLOT, SPF, TAMANO, DAPA, DAP1, DAP2]][(amp[TAMANO] != u'B') & 
+                    ((amp[DAPA] < 2.5) | ((amp[DAP1] + amp[DAP2]) < 5.0))].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=
+                    False) + u"\n"
 
 if len(amp[(amp[TAMANO] != u'L') & (((amp[DAPA] < 10) & (amp[DAPA] >= 2.5)) | (((amp[DAP1] + 
         amp[DAP2]) < 20) & ((amp[DAP1] + amp[DAP2]) >= 5.0)))]):
-    print "Latizales están asignados a categoria erronea:"
-    print amp[[PLOT, TAMANO, DAPA, DAP1, DAP2]][(amp[TAMANO] != 'L') & (((amp[DAPA] < 10) & 
-            (amp[DAPA] >= 2.5)) | (((amp[DAP1] + amp[DAP2]) < 20) & ((amp[DAP1] + 
-            amp[DAP2]) >= 5.0)))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
-            rsuffix=u'_info')
+    
+    logbuffer += u"\nLatizales están asignados a categoria erronea:\n"
+
+    logbuffer += amp[[PLOT, SPF, TAMANO, DAPA, DAP1, DAP2]][(amp[TAMANO] != 'L') & 
+                    (((amp[DAPA] < 10) & (amp[DAPA] >= 2.5)) | (((amp[DAP1] + amp[DAP2]) < 20) 
+                    & ((amp[DAP1] + amp[DAP2]) >= 5.0)))].join(info[[u'PLOT', u'SOCIO']].set_index(
+                    PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False) + u"\n"
     
 if len(amp[(amp[TAMANO] != u'F') & (((amp[DAPA] < 30) & (amp[DAPA] >= 10)) | (((amp[DAP1] + 
         amp[DAP2]) < 60) & ((amp[DAP1] + amp[DAP2]) >= 20)))]):
-    print "Fustales están asignados a categoria erronea:"
-    print amp[[PLOT, TAMANO, DAPA, DAP1, DAP2]][(amp[TAMANO] != 'F') & (((amp[DAPA] < 30) & 
-            (amp[DAPA] >= 10)) | (((amp[DAP1] + amp[DAP2]) < 60) & ((amp[DAP1] + 
-            amp[DAP2]) >= 20)))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
-            rsuffix=u'_info')
+    
+    logbuffer += u"\nFustales están asignados a categoria erronea:\n"
+    
+    logbuffer += amp[[PLOT, SPF, TAMANO, DAPA, DAP1, DAP2]][(amp[TAMANO] != 'F') & (((amp[DAPA] 
+                    < 30) & (amp[DAPA] >= 10)) | (((amp[DAP1] + amp[DAP2]) < 60) & ((amp[DAP1] + 
+                    amp[DAP2]) >= 20)))].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
+                    rsuffix=u'_info').to_string(index=False) + u"\n"
+    
     amp.loc[(amp[TAMANO] != u'F') & (((amp[DAPA] < 30) & (amp[DAPA] >= 10)) | (((amp[DAP1] + 
             amp[DAP2]) < 60) & ((amp[DAP1] + amp[DAP2]) >= 20))), TAMANO] = u'F'
     
 if len(amp[(amp[TAMANO] != u'FG') & ((amp[DAPA] >= 30) | ((amp[DAP1] + amp[DAP2]) >= 60))]):
-    print "Fustales grandes están asignados a categoria erronea:"
-    print amp[[PLOT, TAMANO, DAPA, DAP1, DAP2]][(amp[TAMANO] != 'FG') & ((amp[DAPA] >= 30) 
-            | ((amp[DAP1] + amp[DAP2]) >= 60))].join(info[['PLOT', 'SOCIO']].set_index(PLOT),
-            on=PLOT, rsuffix='_info')
+    
+    logbuffer += u"\nFustales grandes están asignados a categoria erronea:\n"
+    
+    logbuffer += amp[[PLOT, SPF, TAMANO, DAPA, DAP1, DAP2]][(amp[TAMANO] != 'FG') & ((amp[DAPA]
+                    >= 30) | ((amp[DAP1] + amp[DAP2]) >= 60))].join(info[['PLOT', 'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix='_info').to_string(index=False) + u"\n"
+    
     amp.loc[(amp[TAMANO] != u'FG') & ((amp[DAPA] >= 30) | ((amp[DAP1] + amp[DAP2]) >= 60)),
         TAMANO] = u'FG'
 
 # Verificar si las distancias corresponden a las categorias de edad.
 if len(amp[(amp[DIST] > 3) & (amp[TAMANO] == u'L')]):
-    print "Latizales registrados afuera del area aceptada:"
-    print amp[[TAMANO, DIST, DAPA, PLOT]][(amp[DIST] > 3) & (amp[TAMANO] == u'L')].join(info[[
-            u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nLatizales registrados afuera del area aceptada:\n"
+    
+    logbuffer += amp[[TAMANO, DIST, DAPA, PLOT, SPF]][(amp[DIST] > 3) & (amp[TAMANO] == u'L')
+                    ].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info'
+                    ).to_string(index=False) + u"\n"
     
 if len(amp[(amp[DIST] > 7) & (amp[TAMANO] == u'F')]):
-    print "Fustales registrados afuera del area aceptada:"
-    print amp[[TAMANO, DIST, DAPA, PLOT]][(amp[DIST] > 7) & (amp[TAMANO] == u'F')].join(info[[
-            u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nFustales registrados afuera del area aceptada:\n"
+    
+    logbuffer += amp[[TAMANO, DIST, DAPA, PLOT, SPF]][(amp[DIST] > 7) & (amp[TAMANO] == u'F')
+                    ].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info'
+                    ).to_string(index=False) + u"\n"
+    
     amp.drop(amp[(amp[DIST] > 7) & (amp[TAMANO] == u'F')].index, inplace=True)
     
 if len(amp[amp[DIST] > 15]):
-    print "Individuos registrados afuera del area de la subparcela:"
-    print amp[[TAMANO, DIST, DAPA, PLOT]][amp[DIST] > 15].join(info[[u'PLOT', u'SOCIO']]
-            .set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nIndividuos registrados afuera del area de la subparcela:\n"
+    
+    logbuffer += amp[[TAMANO, DIST, DAPA, PLOT, SPF]][amp[DIST] > 15].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=
+                    False) + u"\n"
 
 # Altura total siempre debe ser mayor a la altura del fuste
 if amp[amp[ALTF] > amp[ALTT]].size:
-    print "Individuos con altura del fuste mayor a la altura total:"
-    print amp[[ALTF, ALTT, PLOT]][amp[ALTF] > amp[ALTT]].join(info[[u'PLOT', u'SOCIO']]
-            .set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nIndividuos con altura del fuste mayor a la altura total:\n"
+    
+    logbuffer += amp[[ALTF, ALTT, PLOT, SPF]][amp[ALTF] > amp[ALTT]].join(info[[u'PLOT', 
+                    u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=
+                    False) + u"\n"
     
 # Punto de observacion de diametro
 if len(amp[(amp[POM] > amp[ALTT]) | (amp[POM] > 10.0)]):
-    print "\nValores de Punto de observacion de la medida mayores a la altura o mayores a 10 m."
-    print amp[[ALTT, ALTF, POM, FORMA_FUSTE]][(amp[POM] > amp[ALTT]) | (amp[POM] > 10.0)]
+    
+    logbuffer += u"\nValores de Punto de observacion de la medida mayores a la altura o"                     + u"mayores a 10 m.\n"
+    
+    logbuffer += amp[[ALTT, ALTF, POM, FORMA_FUSTE, PLOT, SPF]][(amp[POM] > amp[ALTT]) | 
+                    (amp[POM] > 10.0)].merge(info[[PLOT, SOCIO]], on=PLOT, how='left'
+                    ).to_string(index=False) + u"\n"
+
     # Se asume que todos los valores mayores a 10 m o a la altura total fueron erroneamente
     # multiplicados por 10. Queda pendiente decidir que hacer con los valores mayores a 2 m
     # de tallo cilindrico
-    amp.loc[((amp[POM] > amp[ALTT]) | (amp[POM] > 10.0)), POM] = amp[POM][(amp[POM] > amp[ALTT])] / 10.0
-
+    amp.loc[((amp[POM] > amp[ALTT]) | (amp[POM] > 10.0)), POM] = amp[POM][(amp[POM] > 
+        amp[ALTT])] / 10.0
     
 # Informacion Penetrometro
 if amp[PI_cm].min() < 0:
-    print "Hay valores negativos de entrada del penetrometro."
+    
+    logbuffer += u"\nHay valores negativos de entrada del penetrometro.\n"
+    
 if amp[PI_cm].max() > 20:
-    print "Valores maximos del entrada del penetrometro mayores al valor sugerido en el manual:"
-    #print det[[PI_cm, D1, D2]][det[PI_cm] > 20]
-    print amp[[PI_cm, PLOT]][amp[PI_cm] > 20].join(info[['PLOT', 'SOCIO']].set_index(PLOT), 
-            on=PLOT, rsuffix='_info')
+    
+    logbuffer += u"\nValores maximos del entrada del penetrometro mayores al valor sugerido"                     +  u"en el manual:\n"
+
+    logbuffer += amp[[PI_cm, PLOT, SPF]][amp[PI_cm] > 20].join(info[['PLOT', 'SOCIO']].set_index(
+            PLOT), on=PLOT, rsuffix='_info').to_string(index=False) + u"\n"
 
 if len(amp[PI_cm][(amp[PI_cm] > amp[DAP1]) | (amp[PI_cm] > amp[DAP2])]):
-    print "Valores de entrada del penetrómetro son mayores al diametro registrado:"
-    print amp[[PI_cm, DAP1, DAP2, PLOT]][(amp[PI_cm] > amp[DAP1]) | (amp[PI_cm] > amp[DAP2])].join(
-            info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nValores de entrada del penetrómetro son mayores al diametro registrado:\n"
+    
+    logbuffer += amp[[PI_cm, DAP1, DAP2, PLOT, SPF]][(amp[PI_cm] > amp[DAP1]) | (amp[PI_cm] 
+                    > amp[DAP2])].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), on=PLOT, 
+                    rsuffix=u'_info').to_string(index=False) + u"\n"
+    
     # Se asume que la medida del penetrometro equivale al diametro
     amp.loc[(amp[PI_cm] > amp[DAP1]), PI_cm] = amp[DAP1][(amp[PI_cm] > amp[DAP1])]
 
 if amp[PI_golpes].min() < 0:
-    print "Valores negativos de golpes al penetrometro."
+    
+    logbuffer += u"\nValores negativos de golpes al penetrometro.\n"
+    
 if amp[PI_golpes].max() > 25:
-    print "Valores maximos de golpes del penetrometro son dudosos:"
-    #print amp[PI_golpes][det[PI_golpes] > 20]
-    print amp[[PI_golpes, PLOT]][amp[PI_golpes] > 20].join(info[[u'PLOT', u'SOCIO']].set_index(PLOT), 
-            on=PLOT, rsuffix=u'_info')
+    
+    logbuffer += u"\nValores maximos de golpes del penetrometro son dudosos:\n"
+    
+    logbuffer += amp[[PI_golpes, PLOT, SPF]][amp[PI_golpes] > 20].join(info[[u'PLOT', u'SOCIO']
+                    ].set_index(PLOT), on=PLOT, rsuffix=u'_info').to_string(index=False) + u"\n"
 
 # Depurar valores de forma de fuste a las abbreviaturas aceptadas
-amp[FORMA_FUSTE].replace(to_replace=[r'\s+', u''], value=[u'', np.nan], regex=True, inplace = True)
+amp[FORMA_FUSTE].replace(to_replace=[r'\s+', u''], value=[u'', np.nan], regex=True, 
+    inplace = True)
+
 amp[FORMA_FUSTE] = amp[FORMA_FUSTE].str.upper()
+
+if interactive:
+    print logbuffer 
+else:
+    with cd.open(logfile, mode='a', encoding='utf-8') as fhandle:
+        fhandle.write(logbuffer)
+logbuffer = u""
 
 
 # # Coordenadas
@@ -665,52 +836,95 @@ E_CHAVE = u'E_CHAVE' # Coeficiente de la ecuacion de Chave (float64)
 
 # In[ ]:
 
+logbuffer = u"\n" + u"#" * 50 + u"\nTABLA COORDENADAS\n"
+
 for fi in [CONS, PLOT, SPF, ZV, EQ]:
+    
     if coord[fi].dtype != np.int64:
-        print "\nCampo {0} tiene tipo inapropiado ({1} en vez de int64).".format(fi, coord[fi].dtype)
+        
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de int64).\n".format(
+                        fi, coord[fi].dtype)
+        
         if len(coord[fi][coord[fi].isna()]) > 1:
-            print "Los siguentes valores nulos son considerados np.float64 por Pandas:"
-            print coord[[fi, PLOT]][amp[fi].isna()]
+            
+            logbuffer += u"\nLos siguentes valores nulos son considerados np.float64 por Pandas:\n"
+            
+            logbuffer += coord[[fi, PLOT, SPF]][amp[fi].isna()].merge(info[[PLOT, SOCIO]], 
+                            on=PLOT, how='left').to_string(index=False) + u"\n"
+            
         else:
-            print "Valores np.float64 a revisar:"
-            print coord[fi][coord[fi].map(lambda x: x % 1.0 != 0)].dropna()
+            
+            logbuffer += u"\nValores np.float64 a revisar:\n"
+            
+            logbuffer += coord[[fi, PLOT, SPF]][coord[fi].map(lambda x: x % 1.0 != 0)].dropna(
+                            ).merge(info[[PLOT, SOCIO]], on=PLOT, how='left').to_string(index=
+                            False) + u"\n"
             
             
 for fi in [LATITUD, LONGITUD, E_CHAVE]:
+    
     if coord[fi].dtype != np.float64:
-        print "\nCampo {0} tiene tipo inapropiado ({1} en vez de float64).".format(fi, coord[fi].dtype)
+        
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de float64)\n.".format(
+                        fi, coord[fi].dtype)
         
         
 for fi in [REGION, ZONA_VIDA]:
+    
     non_strings = coord[fi].dropna()[~coord[fi].dropna().apply(type).eq(unicode)]
+    
     if len(non_strings):
-        print "\nCampo {0} tiene tipo inapropiado ({1} en vez de unicode).".format(fi, non_strings.dtype)
+        
+        logbuffer += u"\nCampo {0} tiene tipo inapropiado ({1} en vez de unicode).\n".format(
+                        fi, non_strings.dtype)
+
+if interactive:
+    print logbuffer
+    logbuffer = u""
 
 
 # In[ ]:
 
 # Verificar que los indices no están duplicados
 if len(coord[coord[CONS].duplicated()]):
-    print "\nTabla {0} contiene indices duplicados.".format(coordenadas)
+    logbuffer += u"\nTabla {0} contiene indices duplicados\n.".format(coordenadas)
 
 # Verificar rangos de coordenadas 
 lat_range = (-5, 15)
 lon_range = (-80, -65)
+
 if coord[LATITUD].min() < lat_range[0] or coord[LATITUD].max() > lat_range[1]:
-    print "\nLatitud fuerra de rango aceptado:"
+    
+    logbuffer +=  "\nLatitud fuerra de rango aceptado.\n"
+    
 if coord[LONGITUD].min() < lon_range[0] or coord[LONGITUD].max() > lon_range[1]:
-    print "\nLongitud fuerra de rango aceptado"
+    
+    logbuffer +=  "\nLongitud fuerra de rango aceptado\n"
 
 # Verificar region geografica    
 for re in coord[REGION].unique():
+    
     if re not in [u'Amazonia', u'Andes', u'Pacifico', u'Orinoquia', u'Caribe']:
-        print "\nRegion biogeografica no aceptada: {0}".format(re)
+        
+        logbuffer += u"\nRegion biogeografica no aceptada: {0}\n".format(re)
 
 # Verificar que todas las parcelas están georeferenciadas
-integ = info[[PLOT,SPFC]].merge(coord[[PLOT, SPF, LATITUD, LONGITUD]], on=[PLOT], how='left')
+integ = info[[PLOT,SPFC]].merge(coord[[PLOT, SPF, LATITUD, LONGITUD]], on=[PLOT], 
+            how='left')
+
 if len(integ[integ[LATITUD].isna() | integ[LONGITUD].isna()]):
-    print "\nAlgunas parcelas no tienen coordenadas geograficas:"
-    print integ[integ[LATITUD].isna() | integ[LONGITUD].isna()]
+    
+    logbuffer +=  "\nAlgunas parcelas no tienen coordenadas geograficas:\n"
+    
+    logbuffer += integ[integ[LATITUD].isna() | integ[LONGITUD].isna()].to_string(index=
+                    False) + u"\n"
+    
+if interactive:
+    print logbuffer 
+else:
+    with open(logfile, 'a') as fhandle:
+        fhandle.write(logbuffer)
+logbuffer = u""
 
 
 # # Inclusion de información en la base de datos
@@ -718,9 +932,9 @@ if len(integ[integ[LATITUD].isna() | integ[LONGITUD].isna()]):
 
 # In[ ]:
 
-import sqlalchemy as sqlalc
+import sqlalchemy as al
 
-engine = sqlalc.create_engine(
+engine = al.create_engine(
     'mysql+mysqldb://{0}:{1}@localhost/IFN?charset=utf8&use_unicode=1'.format(user, password),
     encoding='utf-8')
 
@@ -770,6 +984,8 @@ taxtemp = None
 
 if taxdf.index[0] == 0:
     taxdf.index += 1
+    
+taxdf[u'Fuente'] = 1
 
 taxdf.rename(columns = {FAMILIA: u'Familia', GENERO: u'Genero', AUTOR: u'Autor', EPITETO: u'Epiteto'}
     ).to_sql('Taxonomia', con, if_exists='append', index_label=u'TaxonID')

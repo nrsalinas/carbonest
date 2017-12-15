@@ -336,6 +336,7 @@ taxtemp = None
 if taxdf.index[0] == 0:
     taxdf.index += 1
 
+taxdf[u'Fuente'] = 1
 
 taxdf.rename(columns={Familia:u'Familia', Genero:u'Genero', Autor_genero:u'AutorGenero', Epiteto:u'Epiteto',
     Autor_especie:u'AutorEpiteto', Habito:u'Habito'}).to_sql('Taxonomia', con, 

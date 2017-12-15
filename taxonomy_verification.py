@@ -1,5 +1,5 @@
 import pandas as pd
-import sqlalchemy as sqal
+import sqlalchemy as al
 import re
 import taxon
 
@@ -7,7 +7,7 @@ user = u""
 password = u""
 database = u"" # u'Quimera' or u'Taxon'
 
-engine = sqal.create_engine(
+engine = al.create_engine(
 	'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1'.format(
 	user, password, database), encoding='utf-8')
 
@@ -16,6 +16,7 @@ conn = engine.connect()
 tax = pd.read_sql_table(table_name='Taxonomia',con=engine, index_col='TaxonID')
 
 names = u""
+
 for s in xrange(0, tax.shape[0], 400):
 	names = u""
 	e = int()
@@ -38,55 +39,54 @@ for s in xrange(0, tax.shape[0], 400):
 	revision = taxon.check_names(names, accepted=True)
 
 	for rev in revision:
-		#if len(tax[(tax.Genero == rev[0]) & (tax.Epiteto == rev[1])]) > 0:
-		#new_name = u" ".join(filter(lambda x: isinstance(x, unicode), rev[0:2]))
-		if rev[:4] != rev[-4:] and not rev[:5] in names_to_include:
-			names_to_include.append(rev[:5])
-			if rev[1] is None: # Genus name
-				query = u"INSERT INTO Taxonomia (Genero, AutorGenero, Fuente) VALUES ({0}, {1}, ####,)".format(rev[0], rev[4])
-				ex = conn.execute(query)
-				dad = ex.lastrowid
 
-				query = u"SELECT TaxonID FROM Taxonomia WHERE Genero = {0} AND Epiteto = {1})".format(rev[-4], rev[-3])
-				ex = conn.execute(query)
+		if (rev[u"query"][u"genus"] != rev[u"resp"][u"genus"] or
+			rev[u"query"][u"epithet"] != rev[u"resp"][u"epithet"]):
 
-				query = u"UPDATE Taxonomia SET SinonimoDe = {0} WHERE TaxonID = {1}".format(dad, ex)
-				ex = conn.execute(query)
+			if rev[u"resp"] in names_included:
+				dad = ids_included[names_included.index(rev[u"resp"])]
 
-			else: #binomial
-				query = u"INSERT INTO Taxonomia (Genero, Epiteto, AutorEpiteto, Fuente) VALUES ({0}, {1}, {2}, ####,)".format(rev[0], rev[1], rev[4])
-				ex = conn.execute(query)
-				dad = ex.lastrowid
+				if rev[u"query"][u"epithet"] is None:
+					query = u"SELECT TaxonID FROM Taxonomia WHERE Genero = '{0}' AND Epiteto IS NULL".format(
+								rev[u"query"][u"genus"])
+				else:
+					query = u"SELECT TaxonID FROM Taxonomia WHERE Genero = '{0}' AND Epiteto = '{1}'".format(
+								rev[u"query"][u"genus"], rev[u"query"][u"epithet"])
 
-				query = u"SELECT TaxonID FROM Taxonomia WHERE Genero = {0} AND Epiteto = {1})".format(rev[-4], rev[-3])
+				ex = conn.execute(query)
+				mytax = int(ex.fetchone()[u'TaxonID'])
+
+				query = u"UPDATE Taxonomia SET SinonimoDe = {0} WHERE TaxonID = {1}".format(dad, mytax)
+
 				ex = conn.execute(query)
 
-				query = u"UPDATE Taxonomia SET SinonimoDe = {0} WHERE TaxonID = {1}".format(dad, ex)
+			else:
+				names_included.append(rev[u"resp"])
+				if rev[u"resp"][u"epithet"] is None: # Got only a genus name
+					query = u"INSERT INTO Taxonomia (Familia, Genero, AutorGenero, Fuente) " + \
+								u"VALUES ('{0}', '{1}', '{2}', 'TNRS')".format(rev[u"resp"][u"family"],
+								rev[u"resp"][u"genus"], rev[u"resp"][u"author"])
+				else:
+					query = u"INSERT INTO Taxonomia (Familia, Genero, Epiteto, AutorEpiteto, Fuente) " + \
+						   u"VALUES ('{0}', '{1}', '{2}', 'TNRS')".format(rev[u"resp"][u"family"],
+							rev[u"resp"][u"genus"], rev[u"resp"][u"epithet"], rev[u"resp"][u"author"])
+
+				ex = conn.execute(query)
+				dad = int(ex.lastrowid)
+				ids_included.append(dad)
+
+				if rev[u"query"][u"epithet"] is None:
+					query = u"SELECT TaxonID FROM Taxonomia WHERE Genero = '{0}' AND Epiteto IS NULL".format(
+								rev[u"query"][u"genus"])
+				else:
+					query = u"SELECT TaxonID FROM Taxonomia WHERE Genero = '{0}' AND Epiteto = '{1}'".format(
+								rev[u"query"][u"genus"], rev[u"query"][u"epithet"])
+
+				ex = conn.execute(query)
+				mytax = int(ex.fetchone()[u'TaxonID'])
+
+				query = u"UPDATE Taxonomia SET SinonimoDe = {0} WHERE TaxonID = {1}".format(dad, mytax)
+
 				ex = conn.execute(query)
 
-"""
-Plan
-1. Retrieve all names (genus, epithet, author) from the database.
-
-2. Query TNRS in batches of 500, retrieve only genus, epithet, author
-
-3. For each retrieved name:
-
-	a. Check if it is equal to the corresponding queried name
-
-	b. If they are different because of the spelling:
-
-		i. If the new spelling is already in database: update Taxonomi by adding a synonym
-
-		ii. If the new spelling is absent in db then insert a new row and add synonym
-
-	c. If they are different because of different values:
-
-		i. If the new value is already in database: update Taxonomy by adding a synonym
-
-		ii. If the new value is absent in db then insert a new row and add synonym
-
-
-
-
-"""
+conn.close()

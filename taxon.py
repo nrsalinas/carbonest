@@ -15,16 +15,28 @@ def url_space(taxon_name):
 def split_name(taxon_name):
 	"""
 	Splits a taxonomic name into its components: genus, specific epithet,
-	infraspecific rank, and infraspecific epithet. Returns a tuple.
+	infraspecific rank, and infraspecific epithet. Returns a dictionary.
 	"""
-	out = (None, None, None, None)
+	out = {
+		u"family" : None,
+		u"genus" : None,
+		u"epithet" : None,
+		u"infraRank" : None,
+		u"infraEpithet" : None,
+		u"author" : None
+		}
+
 	if isinstance(taxon_name, str):
 		taxon_name = taxon_name.encode('utf-8')
 	if isinstance(taxon_name, unicode):
 		bits = taxon_name.split(u' ')
-		for xi in range(len(bits), 4):
-			bits.append(None)
-		out = tuple(bits)
+		if len(bits):
+			out[u"genus"] = bits[0]
+			if len(bits) > 1:
+				out[u"epithet"] = bits[1]
+				if len(bits) == 4:
+					out[u"infraRank"] = bits[2]
+					out[u"infraEpithet"] = bits[3]
 	return out
 
 
@@ -76,56 +88,69 @@ def check_names(names, minimum_score = 0.95 ,
 
 	for nami in result[u'items']:
 
-		myGenus = None
-		myEpithet = None
-		myInfraRank = None
-		myInfraEpithet = None
-		myAuthor = None
+		out = {
+			u"resp": {
+				u"family" : None,
+				u"genus" : None,
+				u"epithet" : None,
+				u"infraRank" : None,
+				u"infraEpithet" : None,
+				u"author" : None
+				},
+
+			u"query": None
+			}
+
+		# get a dict similar to out[u"resp"] for the queried name
+		out[u"query"] = split_name(nami[u'nameSubmitted'])
 
 		if nami[u'scientificScore']:
 			nami[u'scientificScore'] = float(nami[u'scientificScore'])
 			if nami[u'scientificScore'] >= minimum_score: # Correct name in nami[nameScientific]
 
+				if nami[u'family']:
+					out[u"resp"][u"family"] = nami[u'family']
+
 				if accepted and nami[u'acceptedName']:
 					bits = nami[u'acceptedName'].split(u' ')
-					myGenus = bits[0]
-					myAuthor = nami[u'acceptedAuthor']
+					out[u"resp"][u"genus"] = bits[0]
+					out[u"resp"][u"author"] = nami[u'acceptedAuthor']
 
 					if len(bits) == 2:
-						myEpithet = bits[1]
+						out[u"resp"][u"epithet"] = bits[1]
 
 					if len(bits) == 4:
-						myEpithet = bits[1]
-						myInfraRank = bits[2]
-						myInfraEpithet = bits[3]
+						out[u"resp"][u"epithet"] = bits[1]
+						out[u"resp"][u"infraRank"] = bits[2]
+						out[u"resp"][u"infraEpithet"] = bits[3]
 
 				else:
 					if nami[u'genusScore']:
 						nami[u'genusScore'] = float(nami[u'genusScore'])
-						myGenus = nami[u'genus']
+						out[u"resp"][u"genus"] = nami[u'genus']
 
 						if nami[u'epithetScore']:
 							nami[u'epithetScore'] = float(nami[u'epithetScore'])
-							myEpithet = nami[u'epithet']
+							out[u"resp"][u"epithet"] = nami[u'epithet']
 
 							if nami[u'infraspecific1EpithetScore']:
 								nami[u'infraspecific1EpithetScore'] = float(nami[u'infraspecific1EpithetScore'])
-								myInfraEpithet = nami[u'infraspecific1Epithet']
+								out[u"resp"][u"infraEpithet"] = nami[u'infraspecific1Epithet']
 
 								if nami[u'nameScientific'].find(u' var. ') >= 0:
-									myInfraRank = u"var."
+									out[u"resp"][u"infraRank"] =  u"var."
 								elif nami[u'nameScientific'].find(u' subsp. ') >= 0:
-									myInfraRank = u"subsp."
+									out[u"resp"][u"infraRank"] =  u"subsp."
 
 							# authorAttributed always retrieved
 							if nami[u'authorAttributed']:
-								myAuthor = nami[u'authorAttributed']
+								out[u"resp"][u"author"] = nami[u'authorAttributed']
 
 					# authorScore only retrieved if queried author starts with upper case
 					#if nami[u'authorScore']:
 					#	nami[u'authorScore'] = float(nami[u'authorScore'])
 					#	myAuthor = nami[u'author']
 
-		checked.append((myGenus, myEpithet, myInfraRank, myInfraEpithet, myAuthor) + split_name(nami[u'nameSubmitted']))
+		checked.append(out)
 
 	return checked
