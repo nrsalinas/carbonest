@@ -57,6 +57,9 @@ CREATE TABLE Taxonomia (
 	AutorGenero VARCHAR(255) DEFAULT NULL,
 	Epiteto VARCHAR(255) DEFAULT NULL,
 	AutorEpiteto VARCHAR(255) DEFAULT NULL,
+#	InfraCategoria ENUM('var.', 'subsp.', 'f.') DEFAULT NULL,
+#	InfraEpiteto VARCHAR(255) DEFAULT NULL,
+#	InfraAutor VARCHAR(255) DEFAULT NULL,
 	SinonimoDe INT DEFAULT NULL, # Referencia a Taxonomia.TaxonID. Si es aceptado entonces NULL
 	Habito ENUM('Arborea', 'Palma', 'Liana', 'No arborea') DEFAULT NULL,
 	Origen ENUM('Nativa', 'Introducida') DEFAULT NULL,

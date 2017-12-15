@@ -12,6 +12,21 @@ def url_space(taxon_name):
 		new_name = None
 	return new_name
 
+def split_name(taxon_name):
+	"""
+	Splits a taxonomic name into its components: genus, specific epithet,
+	infraspecific rank, and infraspecific epithet. Returns a tuple.
+	"""
+	out = (None, None, None, None)
+	if isinstance(taxon_name, str):
+		taxon_name = taxon_name.encode('utf-8')
+	if isinstance(taxon_name, unicode):
+		bits = taxon_name.split(u' ')
+		for xi in range(len(bits), 4):
+			bits.append(None)
+		out = tuple(bits)
+	return out
+
 
 def check_names(names, minimum_score = 0.95 ,
 		tnrs_url = u"http://tnrs.iplantc.org/tnrsm-svc/matchNames" ,
@@ -44,8 +59,12 @@ def check_names(names, minimum_score = 0.95 ,
 	if isinstance(names, list) or isinstance(names, tuple):
 		if isinstance(names[0], str):
 			names = u",".join(map(lambda x: url_space(x).decode('utf-8'), names))
+		elif isinstance(names[0], unicode):
+			pass
 	elif isinstance(names, str):
 		names = url_space(names).decode('utf-8')
+	elif isinstance(names, unicode):
+		pass
 	else:
 		checked = None ### Throw TypeError
 
@@ -107,7 +126,6 @@ def check_names(names, minimum_score = 0.95 ,
 					#	nami[u'authorScore'] = float(nami[u'authorScore'])
 					#	myAuthor = nami[u'author']
 
-
-		checked.append((myGenus, myEpithet, myInfraRank, myInfraEpithet, myAuthor))
+		checked.append((myGenus, myEpithet, myInfraRank, myInfraEpithet, myAuthor) + split_name(nami[u'nameSubmitted']))
 
 	return checked
