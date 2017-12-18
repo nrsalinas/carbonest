@@ -299,8 +299,8 @@ for acc in asig[Acceso].unique():
 
 # In[ ]:
 
-import sqlalchemy as sqlalc
-engine = sqlalc.create_engine(
+import sqlalchemy as al
+engine = al.create_engine(
     'mysql+mysqldb://{0}:{1}@localhost/Quimera?charset=utf8&use_unicode=1'.format(user, password),
     encoding='utf-8')
 
@@ -389,7 +389,9 @@ asig[[Plot, Area, Custodio, Custodio_abreviado, Proyecto, X, Y, X_MAGNA, Y_MAGNA
 fuen = ind.groupby(by=Fuente_densidad).size().reset_index().drop(labels=0, axis=1)
 
 if fuen.index[0] == 0:
-    fuen.index += 1
+    fuen.index += 2
+# Numeración del indice comienza en 2 porque ya existe una entrada
+# en la tabla: `Custodio`
     
 fuen.rename(columns={Fuente_densidad:'Nombre'}).to_sql('Fuentes', engine, if_exists='append',
     index_label = 'FuenteID')

@@ -74,12 +74,12 @@ def chave_height(diameter, longitude, latitude, raster_file):
 
 ###################################
 # Biomass estimation functions
-# requiring only diameter 
+# requiring only diameter
 ###################################
 
 def chaveI(diameter, density, forest_type):
 	"""
-	Estimates tree biomass (gr) through the allometric equation proposed by
+	Estimates tree biomass (Kg) through the allometric equation proposed by
 	Chave et al. 2005, Oecologia 145: 87-99 (Chave I). Returns a float.
 
 	Arguments:
@@ -123,7 +123,7 @@ def chaveI(diameter, density, forest_type):
 
 def alvarez(diameter, density, forest_type):
 	"""
-	Estimates tree biomass (gr) through the allometric equations type II.1
+	Estimates tree biomass (Kg) through the allometric equations type II.1
 	proposed by Alvarez et al. 2013, Forest Ecology and Managament 267: 297-308. Returns a float.
 
 	Arguments:
@@ -192,7 +192,7 @@ def alvarez(diameter, density, forest_type):
 
 def chaveII(diameter, density, longitud, latitude, raster_file):
 	"""
-	Estimates tree biomass (gr) through the allometric equation proposed by
+	Estimates tree biomass (Kg) through the allometric equation proposed by
 	Chave et al. 2014, Global Change Biology 20: 3177-3190 (Chave II). Returns a
 	float.
 
