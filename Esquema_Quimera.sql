@@ -89,7 +89,8 @@ CREATE TABLE Determinaciones (
 	Incert ENUM('aff.', 'cf.', 'vel sp. aff.'),
 	DetPrevia INT DEFAULT NULL, /* Referencia a otro DetID, si es la primera entonces NULL */
 	Determinador VARCHAR(255) DEFAULT NULL, /* Persona que determinó los ejemplares, no la fuente del nombre taxonomico */
-	FechaMod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
+	FechaDet DATE DEFAULT NULL,
+	FechaMod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, /* Fecha de insercion del registro en la db */
 	PRIMARY KEY (DetID)
 	)
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;

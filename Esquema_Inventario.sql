@@ -16,7 +16,7 @@ USE IFN;
 DROP TABLE IF EXISTS Detritos;
 CREATE TABLE Detritos (
 	DetritoID INT NOT NULL UNIQUE,
-	Plot INT NOT NULL, # referencia a Conglomerados.PlotID
+	Plot INT NOT NULL, /* referencia a Conglomerados.PlotID */
 	Transecto ENUM('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H') DEFAULT NULL,
 	Seccion TINYINT DEFAULT NULL, # 1, 2, 3
 	Pieza INT DEFAULT NULL,
@@ -45,9 +45,9 @@ CREATE TABLE Detritos (
 
 DROP TABLE IF EXISTS Tallos;
 CREATE TABLE Tallos (
-	#
-	# DEBE SER AUTO_INCREMENT?
-	#
+	/*
+	DEBE SER AUTO_INCREMENT?
+	*/
 	TalloID INT NOT NULL UNIQUE,
 	Diametro1 FLOAT DEFAULT NULL,
 	Diametro2 FLOAT DEFAULT NULL,
@@ -60,7 +60,8 @@ CREATE TABLE Tallos (
 	EquipoAlt ENUM('HI', 'VT', 'CL', 'CM', 'VX', 'FL', 'CD') DEFAULT NULL,
 	Individuo INT NOT NULL, # referencia a Individuos.IndividuoID
 
-	# Campos especificos para Arboles Muerts en Pie
+	/*###################################
+	Campos especificos para Arboles Muerts en Pie */
 	Condicion ENUM('MP', 'TO', 'VP', 'MC', 'M') DEFAULT NULL,
 	POM FLOAT DEFAULT NULL,
 	DANO ENUM('Q', 'DB', 'SD', 'DM', 'IRR', 'EB') DEFAULT NULL, # solo AMP
@@ -111,10 +112,12 @@ CREATE TABLE Taxonomia (
 DROP TABLE IF EXISTS Determinaciones;
 CREATE TABLE Determinaciones (
 	DetID INT AUTO_INCREMENT NOT NULL,
-	Taxon INT NOT NULL, # Referencia a Taxonomia.TaxonID
+	Taxon INT NOT NULL, /* Referencia a Taxonomia.TaxonID */
 	Incert ENUM('aff.', 'cf.', 'vel sp aff.'),
-	DetPrevia INT DEFAULT NULL, # Referencia a otro DetID, si es la primera entonces NULL
-	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, # Fecha de insercion del registro en la db
+	DetPrevia INT DEFAULT NULL, /* Referencia a otro DetID, si es la primera entonces NULL */
+	Determinador VARCHAR(255) DEFAULT NULL, /* Persona que determinó los ejemplares, no la fuente del nombre taxonomico */
+	FechaDet DATE DEFAULT NULL,
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, /* Fecha de insercion del registro en la db */
 	PRIMARY KEY (DetID)
 	)
 	ENGINE = INNODB DEFAULT CHARSET=UTF8;
