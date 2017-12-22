@@ -34,15 +34,45 @@ def load_data(csv_file):
 						out[bits[1]][genus][epitet].append(float(bits[3]))
 	return out
 
-def get_density(genus, epitet, wd_data, family = None):
-	"""
-	Retrieves wood density of a taxon.
-	"""
-	pass
 
-def interpolate(wd_data, genus, family):
+def get_density(family, genus, epitet, wd_data):
 	"""
-	Interpolate wood density value from available data. Requires at least genus
-	info.
+	Retrieves wood density of a taxon from a wood density database object. If
+	the species or genus is not included in the DB, an average of the associated
+	genus or family is retrieved, respectively. Returns a float.
+
+	Arguments:
+
+	- family (str): Botanical family. Should follow APGIV classification system.
+
+	- genus (str): Botanical genus.
+
+	- epitet (str): Species epitet.
+
+	- wd_data (dict): Data base with wood density values as loaded by function
+	wood_density.load_data.
+
 	"""
-	pass
+	out = 0.0
+	if family is not None and family in wd_data:
+		if genus is not None and genus in wd_data[family]:
+			if epitet is not None and epitet in wd_data[family][genus]:
+				if len(wd_data[family][genus][epitet]) >= 1:
+					out = sum(wd_data[family][genus][epitet])
+					out /= len(wd_data[family][genus][epitet])
+				else:
+					print "{0} {1} included in the wood density DB but no values associated.".format(genus, epitet)
+			else:
+				spp_count = 0
+				for other_sp in wd_data[family][genus]:
+					out += sum(wd_data[family][genus][other_sp])
+					spp_count += len(wd_data[family][genus][other_sp])
+				out /= spp_count
+		else:
+			spp_count = 0
+			for other_gen in wd_data[family]:
+				for other_sp in wd_data[family][other_gen]:
+					out += sum(wd_data[family][other_gen][other_sp])
+					spp_count += len(wd_data[family][other_gen][other_sp])
+			out /= spp_count
+	return out
