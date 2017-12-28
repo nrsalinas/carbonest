@@ -6,12 +6,73 @@ Version 2:
 - Primera fila en Fuentes es 'Socio', la fuente de toda la
   informacion taxonomica inicial.
 
+Version 3:
+
+- Tablas Analizador, Carbono y Fertilidad incluidas.
+
 ###########################################################*/
 
 DROP DATABASE IF EXISTS IFN;
 CREATE DATABASE IFN CHARACTER SET utf8 COLLATE utf8_bin;
 
 USE IFN;
+
+DROP TABLE IF EXISTS Analizador;
+CREATE TABLE Analizador (
+	AnalisisID INT NOT NULL UNIQUE,
+	Plot INT NOT NULL, /* referencia a Conglomerados.PlotID */
+	Subparcela TINYINT DEFAULT NULL,
+	Nitrogeno FLOAT DEFAULT NULL, # Porcentaje de nitrogeno
+	Carbono FLOAT DEFAULT NULL, # Porcentaje de carbono
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (AnalisisID)
+	)
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
+
+
+DROP TABLE IF EXISTS Carbono;
+CREATE TABLE Carbono (
+	CarbonoID INT NOT NULL UNIQUE,
+	Plot INT NOT NULL, /* referencia a Conglomerados.PlotID */
+	Subparcela TINYINT DEFAULT NULL,
+	Contenido FLOAT DEFAULT NULL, # Porcentaje de Carbono
+	Masa FLOAT DEFAULT NULL, # Masa de la muestra de suelo
+	Raiz FLOAT DEFAULT NULL,
+	Roca FLOAT DEFAULT NULL,
+	Volumen FLOAT DEFAULT NULL,
+	Densidad FLOAT DEFAULT NULL,
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (CarbonoID)
+	)
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
+
+
+DROP TABLE IF EXISTS Fertilidad;
+CREATE TABLE Fertilidad (
+	FertID INT NOT NULL UNIQUE,
+	Plot INT NOT NULL, /* referencia a Conglomerados.PlotID */
+	Textura VARCHAR(50) DEFAULT NULL,
+	MateriaOrganica FLOAT DEFAULT NULL, # porcentaje
+	Arena FLOAT DEFAULT NULL, # porcentaje
+	Limo FLOAT DEFAULT NULL, # porcentaje
+	Arcilla FLOAT DEFAULT NULL, # porcentaje
+	pH FLOAT DEFAULT NULL,
+	CICE FLOAT DEFAULT NULL, # meq
+	Aluminio FLOAT DEFAULT NULL, # meq
+	Calcio FLOAT DEFAULT NULL, # meq
+	Cobre FLOAT DEFAULT NULL, # ppm
+	Fosforo FLOAT DEFAULT NULL, # ppm
+	Hierro FLOAT DEFAULT NULL, # ppm
+	Magnesio FLOAT DEFAULT NULL, # meq
+	Manganeso FLOAT DEFAULT NULL, # ppm
+	Nitrogeno FLOAT DEFAULT NULL, # porcentaje
+	Potasio FLOAT DEFAULT NULL, # meq
+	Zinc FLOAT DEFAULT NULL, # ppm
+	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (FertID)
+	)
+	ENGINE = INNODB DEFAULT CHARSET=UTF8;
+
 
 DROP TABLE IF EXISTS Detritos;
 CREATE TABLE Detritos (
@@ -139,7 +200,7 @@ CREATE TABLE Conglomerados (
 DROP TABLE IF EXISTS Coordenadas;
 CREATE TABLE Coordenadas (
 	Plot INT, # Referencia a Conglomerados.PlotID
-	SPF TINYINT DEFAULT NULL,
+	SPF TINYINT NOT NULL,
 	Latitud FLOAT DEFAULT NULL,
 	Longitud FLOAT DEFAULT NULL,
 	ZV FLOAT DEFAULT NULL,
@@ -183,6 +244,24 @@ INSERT INTO Fuentes (FuenteID, Nombre, Acronimo, Year)
 
 
 # Foreign keys
+ALTER TABLE Analizador
+ADD FOREIGN KEY anlz2plot (Plot)
+REFERENCES Conglomerados (PlotID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Carbono
+ADD FOREIGN KEY carb2plot (Plot)
+REFERENCES Conglomerados (PlotID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
+ALTER TABLE Fertilidad
+ADD FOREIGN KEY fert2plot (Plot)
+REFERENCES Conglomerados (PlotID)
+ON DELETE RESTRICT
+ON UPDATE CASCADE;
+
 ALTER TABLE Detritos
 ADD FOREIGN KEY detr2plot (Plot)
 REFERENCES Conglomerados (PlotID)
