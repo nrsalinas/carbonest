@@ -24,8 +24,8 @@ import pandas as pd
 import numpy as np
 
 # MySQL user and password
-password = u""
-user = u""
+password = u"Soledad1"
+user = u"root"
 
 # Asignar nombres de archivos a variables
 asignacion = "../data/quimera/asignacion.csv"
@@ -312,8 +312,6 @@ engine = al.create_engine(
     encoding='utf-8')
 
 con = engine.connect()
-# Desactivar la verificación de foreign keys para la inserción en lote
-con.execute('SET foreign_key_checks = 0') 
 
 
 # In[ ]:
@@ -432,7 +430,5 @@ dens.to_sql('Densidades', con, if_exists='append', index_label = 'DensidadID')
 # In[ ]:
 
 
-# Restituir la verificación de foreign keys
-con.execute('SET foreign_key_checks = 1')
 con.close()
 

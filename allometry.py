@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 GDAL = 0
 try:
@@ -48,6 +49,64 @@ def getE(longitude, latitude, raster_file):
 		py = int((latitude - yOrigin) / pixelHeight) #y pixel
 		intval = E_band.ReadAsArray(px,py,1,1)
 		out = intval[0][0]
+
+	else:
+		print "Function getE is not available: requires package gdal."
+
+	return out
+
+
+def chaveI_forest(longitude, latitude, raster_files):
+	"""
+	Estimate the forest type according to Chave et al. 2005, Oecologia 145: 87-99.
+	Returns a str.
+
+	Arguments:
+
+	- longitude (float): Locality longitude (decimal degrees).
+
+	- latitude (float): Locality latitude (decimal degrees).
+
+	- raster_files (str): Path to raster files of monthly precipitation. Should
+	follow WorldClim v2 filename standard.
+
+	Possible output categories:
+
+	- 'wet': Evapotranspiration exceeds rainfall during a month or less (rainfall
+	> 3500 mm / year).
+
+	- 'moist': Evapotranspiration exceeds rainfall for 1-5 months a year (rainfall
+	in the range 1500-3500 mm / year).
+
+	- 'dry': Evapotranspiration exceeds rainfall more than 5 months a year (rainfall
+	 < 1500 mm / year).
+	"""
+
+	out = None
+
+	if GDAL:
+		month_prec = []
+		for myfile in os.listdir(raster_files):
+			if myfile.endswith('.tif'):
+				prec_raster = gdal.Open(raster_files + '/' + myfile)
+				transform = prec_raster.GetGeoTransform()
+				xOrigin = transform[0]
+				yOrigin = transform[3]
+				pixelWidth = transform[1]
+				pixelHeight = transform[5]
+				prec_band = prec_raster.GetRasterBand(1)
+				px = int((longitude - xOrigin) / pixelWidth) #x pixel
+				py = int((latitude - yOrigin) / pixelHeight) #y pixel
+				intval = prec_band.ReadAsArray(px,py,1,1)
+				month_prec.append(intval[0][0])
+
+		year_prec = sum(month_prec)
+		if year_prec <= 1500:
+			out = 'dry'
+		elif year_prec <= 3500:
+			out = 'moist'
+		else:
+			out = 'wet'
 
 	else:
 		print "Function getE is not available: requires package gdal."
@@ -215,6 +274,6 @@ def chaveII(diameter, density, longitud, latitude, raster_file):
 				2.673 * np.log(diameter) - 0.029 * np.log(diameter)**2)
 
 	else:
-		print "Function chave_height is not available: requires package gdal."
+		print "Function chaveII is not available: requires package gdal."
 
 	return AGB

@@ -1,10 +1,14 @@
 /*###########################################################
-Version 2:
+Version 2 (2017-12-20):
 
 - Fuentes en Taxonomia son referencias a FuenteID en Fuentes
 
 - Primera fila en Fuentes es 'Custodio', la fuente de toda la
   informacion taxonomica inicial.
+
+Version 2.1 (2018-01-02):
+
+- Foreign Keys desabilitadas para agilizar desarrollo.
 
 ###########################################################*/
 
@@ -126,8 +130,10 @@ INSERT INTO Fuentes (FuenteID, Nombre, Acronimo, Year)
 	VALUES (1, 'Custodio', 'Custodio', 2017);
 
 /*###########################################################
- Foreign keys. Habilitar despues de poblar las tablas.
-###########################################################*/
+ Foreign keys.
+ Desabilitades porque el desarrollo y prueba de codigo es
+ bastante lento.
+
 ALTER TABLE Individuos
 ADD FOREIGN KEY ind2det (Dets)
 REFERENCES Determinaciones (DetID)
@@ -163,3 +169,5 @@ ADD FOREIGN KEY tax2fuent (Fuente)
 REFERENCES Fuentes (FuenteID)
 ON DELETE RESTRICT
 ON UPDATE CASCADE;
+
+###########################################################*/

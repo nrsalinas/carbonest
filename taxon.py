@@ -95,7 +95,8 @@ def check_names(names, minimum_score = 0.95 ,
 				u"epithet" : None,
 				u"infraRank" : None,
 				u"infraEpithet" : None,
-				u"author" : None
+				u"author" : None,
+				u"score" : None
 				},
 
 			u"query": None
@@ -106,6 +107,7 @@ def check_names(names, minimum_score = 0.95 ,
 
 		if nami[u'scientificScore']:
 			nami[u'scientificScore'] = float(nami[u'scientificScore'])
+			out[u"resp"][u"score"] = nami[u'scientificScore']
 			if nami[u'scientificScore'] >= minimum_score: # Correct name in nami[nameScientific]
 
 				if nami[u'family']:
