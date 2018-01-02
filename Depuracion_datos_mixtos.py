@@ -19,6 +19,7 @@
 
 # In[ ]:
 
+
 import pandas as pd
 import numpy as np
 
@@ -33,6 +34,7 @@ individuos =  "../data/quimera/newind.csv"
 
 # In[ ]:
 
+
 asig = pd.read_csv(asignacion, encoding = 'utf8')
 
 # low_memory asume que los datos estan homogeneamente tipificados.
@@ -44,6 +46,7 @@ ind = pd.read_csv(individuos, low_memory=False, encoding = 'utf8')
 # A continuación se adjudica una variable a cada nombre de la columna en ambos archivos. Si los nombres no son los mencionados deben ser actualizados en concordancia. El nombre de la columna que contiene el indice de la parcela debe ser igual en ambos archivos.
 
 # In[ ]:
+
 
 # Variables de campos de tabla `individuos`
 
@@ -71,6 +74,7 @@ fields_ind = [FID, Plot, D, H, X, Y, Placa, Densidad, Fuente_densidad, Habito, E
 
 
 # In[ ]:
+
 
 # Variables de campos de tabla `asignacion`
 
@@ -109,6 +113,7 @@ fields_asig = [Plot, Area, Year, Tipo_parcela, Custodio, Custodio_abreviado, Par
 # A continuación se verifica si los datos de ambas tablas están presentados en los tipos de datos esperados.
 
 # In[ ]:
+
 
 # Verificar si todas las columnas tienen el tipo de dato adecuado
 
@@ -173,6 +178,7 @@ for fi in [Tipo_parcela, Custodio, Custodio_abreviado, Parcela_original, Departa
 
 # In[ ]:
 
+
 #########################################
 # Tabla individuos
 #########################################
@@ -180,7 +186,7 @@ for fi in [Tipo_parcela, Custodio, Custodio_abreviado, Parcela_original, Departa
 # Indice no debe contener duplicado
 if len(ind[ind[FID].duplicated()]):
     print "Tabla {0} contiene indices duplicados.".format(individuos)
-    
+
 # Rango de diametro = 10-770 (diametro de General Sherman)
 if ind[D].min() < 10:
     print "Existen valores de diametro inferiores a 10 cm"
@@ -299,6 +305,7 @@ for acc in asig[Acceso].unique():
 
 # In[ ]:
 
+
 import sqlalchemy as al
 engine = al.create_engine(
     'mysql+mysqldb://{0}:{1}@localhost/Quimera?charset=utf8&use_unicode=1'.format(user, password),
@@ -310,6 +317,7 @@ con.execute('SET foreign_key_checks = 0')
 
 
 # In[ ]:
+
 
 # Crear una lista unica de especies y escribirla a la tabla Taxonomia
 
@@ -345,6 +353,7 @@ taxdf.rename(columns={Familia:u'Familia', Genero:u'Genero', Autor_genero:u'Autor
 
 # In[ ]:
 
+
 # Insertando la informacion de determinaciones
 
 if u'Taxon' not in taxdf.columns:
@@ -362,6 +371,7 @@ ind[['Taxon', 'Incert']].to_sql('Determinaciones', con, if_exists='append', inde
 
 # In[ ]:
 
+
 # Guardando los datos en la tabla Individuos
 
 ind[[FID, D, H, Placa, Plot , X, Y]].merge(asig[[Plot,Year]], on=Plot, how='left').rename(
@@ -370,6 +380,7 @@ ind[[FID, D, H, Placa, Plot , X, Y]].merge(asig[[Plot,Year]], on=Plot, how='left
 
 
 # In[ ]:
+
 
 # Tabla Parcelas
 
@@ -383,6 +394,7 @@ asig[[Plot, Area, Custodio, Custodio_abreviado, Proyecto, X, Y, X_MAGNA, Y_MAGNA
 
 
 # In[ ]:
+
 
 # Tabla Fuentes
 
@@ -398,6 +410,7 @@ fuen.rename(columns={Fuente_densidad:'Nombre'}).to_sql('Fuentes', engine, if_exi
 
 
 # In[ ]:
+
 
 # Tabla Densidades
 
@@ -417,6 +430,7 @@ dens.to_sql('Densidades', con, if_exists='append', index_label = 'DensidadID')
 
 
 # In[ ]:
+
 
 # Restituir la verificación de foreign keys
 con.execute('SET foreign_key_checks = 1')
