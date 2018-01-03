@@ -32,7 +32,7 @@ else:
 	ex = conn.execute(query)
 	TNRS_ID = int(ex.lastrowid)
 
-tax = pd.read_sql_table(table_name='Taxonomia',con=engine, index_col='TaxonID')
+tax = pd.read_sql_table(table_name='Taxonomia',con=conn, index_col='TaxonID')
 
 tax_orphan = tax[tax.SinonimoDe.isna()]
 

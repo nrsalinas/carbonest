@@ -13,6 +13,142 @@ except ImportError as e:
 except:
 	raise
 
+
+def altitude(longitude, latitude, rasters):
+	"""
+	rasters = Iterable of raster file paths where the location maybe be found.
+	"""
+	out = None
+	if GDAL:
+		target_raster = None
+		for rfile in rasters:
+			tras = gdal.Open(rfile)
+			transform = tras.GetGeoTransform()
+			xOrigin = transform[0]
+			yOrigin = transform[3]
+			pixelWidth = transform[1]
+			pixelHeight = transform[5]
+			xEnd = xOrigin + pixelWidth * tras.RasterXSize
+			yEnd = yOrigin + pixelHeight * tras.RasterYSize
+			#print xOrigin, '<', longitude, '<' , xEnd, '|', yOrigin ,'>', latitude, '>', yEnd
+			if (xOrigin < longitude < xEnd) and (yOrigin > latitude > yEnd):
+				target_raster = rfile
+				break
+		if target_raster is not None:
+			myras = gdal.Open(rfile)
+			transform = myras.GetGeoTransform()
+			xOrigin = transform[0]
+			yOrigin = transform[3]
+			pixelWidth = transform[1]
+			pixelHeight = transform[5]
+			px = int((longitude - xOrigin) / pixelWidth) #x pixel
+			py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			myband = myras.GetRasterBand(1)
+			intval = myband.ReadAsArray(px,py,1,1)
+			out = intval[0][0]
+
+	return out
+
+
+def precipitation(longitude, latitude, raster_files):
+	"""
+	Estimates yearly aggregated precipitation from monthly data.
+
+	- raster_files (str): Path to raster files of monthly precipitation. Should
+	follow WorldClim v2 filename standard (*.tif).
+	"""
+	out = None
+	radius = 0
+	if GDAL:
+		out = -1
+		while out < 0:
+			month_prec = []
+			for myfile in os.listdir(raster_files):
+				if myfile.endswith('.tif'):
+					prec_raster = gdal.Open(raster_files + '/' + myfile)
+					transform = prec_raster.GetGeoTransform()
+					xOrigin = transform[0]
+					yOrigin = transform[3]
+					pixelWidth = transform[1]
+					pixelHeight = transform[5]
+					prec_band = prec_raster.GetRasterBand(1)
+					px = int((longitude - xOrigin) / pixelWidth) #x pixel
+					py = int((latitude - yOrigin) / pixelHeight) #y pixel
+					pxs = [px-radius, px+radius]
+					pys = [py-radius, py+radius]
+					for npx in pxs:
+						for npy in pys:
+							intval = prec_band.ReadAsArray(npx,npy,1,1)
+							if intval[0][0] > 0:
+								month_prec.append(intval[0][0])
+
+			if len(month_prec):
+				out = (sum(month_prec) / float(len(month_prec))) * 12
+
+			radius += 1
+
+	return out
+
+
+def holdridge_col(altitude, precipitation):
+	"""
+	Estimates the life zone according to Holdridge (1971, `Forest Environments in
+	Tropical Life Zones: A Pilot Study`). Only estimates forest life zones.
+	Arguments are altitude (m) and precipitation (mm / year).
+	"""
+	out = None
+	if altitude < 1000:
+		if 500 <= precipitation < 1000:
+			out = 'tropical_very_dry'
+		elif 1000 <= precipitation < 2000:
+			out = 'tropical_dry'
+		elif 2000 <= precipitation < 4000:
+			out = 'tropical_moist'
+		elif 4000 <= precipitation < 8000:
+			out = 'tropical_wet'
+		elif 8000 <= precipitation:
+			out = 'tropical_rain'
+		else:
+			pass
+	elif 1000 <= altitude < 2000:
+		if 500 <= precipitation < 1000:
+			out = 'premontane_dry'
+		elif 1000 <= precipitation < 2000:
+			out = 'premontane_moist'
+		elif 2000 <= precipitation < 4000:
+			out = 'premontane_wet'
+		elif 4000 <= precipitation < 8000:
+			out = 'premontane_rain'
+		else:
+			pass
+	elif 2000 <= altitude < 3000:
+		if 500 <= precipitation < 1000:
+			out = 'lower_montane_dry'
+		elif 1000 <= precipitation < 2000:
+			out = 'lower_montane_moist'
+		elif 2000 <= precipitation < 4000:
+			out = 'lower_montane_wet'
+		elif 4000 <= precipitation < 8000:
+			out = 'lower_montane_rain'
+		else:
+			pass
+	elif 3000 <= altitude < 4000:
+		if 500 <= precipitation < 1000:
+			out = 'montane_moist'
+		elif 1000 <= precipitation < 2000:
+			out = 'montane_wet'
+		elif 2000 <= precipitation < 4000:
+			out = 'montane_wet'
+		else:
+			pass
+	else:
+		pass
+
+	return out
+
+
+
+
 ###################################
 # Height estimation functions
 ###################################
@@ -56,19 +192,10 @@ def getE(longitude, latitude, raster_file):
 	return out
 
 
-def chaveI_forest(longitude, latitude, raster_files):
+def chaveI_forest(precipitation):
 	"""
 	Estimate the forest type according to Chave et al. 2005, Oecologia 145: 87-99.
-	Returns a str.
-
-	Arguments:
-
-	- longitude (float): Locality longitude (decimal degrees).
-
-	- latitude (float): Locality latitude (decimal degrees).
-
-	- raster_files (str): Path to raster files of monthly precipitation. Should
-	follow WorldClim v2 filename standard.
+	Returns a str. Precipitation should be a numerical value in the form mm / year.
 
 	Possible output categories:
 
@@ -84,32 +211,12 @@ def chaveI_forest(longitude, latitude, raster_files):
 
 	out = None
 
-	if GDAL:
-		month_prec = []
-		for myfile in os.listdir(raster_files):
-			if myfile.endswith('.tif'):
-				prec_raster = gdal.Open(raster_files + '/' + myfile)
-				transform = prec_raster.GetGeoTransform()
-				xOrigin = transform[0]
-				yOrigin = transform[3]
-				pixelWidth = transform[1]
-				pixelHeight = transform[5]
-				prec_band = prec_raster.GetRasterBand(1)
-				px = int((longitude - xOrigin) / pixelWidth) #x pixel
-				py = int((latitude - yOrigin) / pixelHeight) #y pixel
-				intval = prec_band.ReadAsArray(px,py,1,1)
-				month_prec.append(intval[0][0])
-
-		year_prec = sum(month_prec)
-		if year_prec <= 1500:
-			out = 'dry'
-		elif year_prec <= 3500:
-			out = 'moist'
-		else:
-			out = 'wet'
-
+	if year_prec <= 1500:
+		out = 'dry'
+	elif year_prec <= 3500:
+		out = 'moist'
 	else:
-		print "Function getE is not available: requires package gdal."
+		out = 'wet'
 
 	return out
 
