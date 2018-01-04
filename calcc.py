@@ -1,5 +1,6 @@
 import pandas as pd
 import sqlalchemy as al
+import numpy as np
 import pyproj
 
 """
@@ -25,13 +26,44 @@ inpr = pyproj.Proj('+proj=utm +zone=18 +ellps=WGS84 +datum=WGS84 +units=m +no_de
 # WGS 84 projection
 outpr = pyproj.Proj(init='epsg:4326')
 
-for_types = {}
-for row in par.itertuples():
-	lon, lat = pyproj.transform(inpr, outpr, row.X, row.Y)
+par['holdridge'] = np.nan
+par['chave_for'] = np.nan
+
+def fortypes(row, inproj, outproj):
+	lon, lat = pyproj.transform(inproj, outproj, row.X, row.Y)
 	alt = allometry.altitude(lon, lat, ('/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_23.tif',
         '/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_33.tif'))
 	prep = allometry.precipitation(lon, lat, '/home/nelsonsalinas/Documents/WorldClim/v2/precipitation_30_sec')
-	hold = allometry.holdridge_col(alt, prep)
-	for_types[hold] = 0
-	if hold is None:
-		print alt, prep, lon, lat
+	row.holdridge = allometry.holdridge_col(alt, prep)
+	row.chave_for = allometry.chaveI_forest(prec)
+	return None
+
+par = par.apply(lambda x: fortypes(x, inpr, outpr))
+
+# Compilar densidades
+
+"""
+
+for each taxon in densidades
+	taxon not updated
+	 	take the density as it is
+	taxon updated
+		check density source
+			it is specific
+				estimate new density
+			it is genus average
+				the genus was updated
+					re-estimate density
+				the genus was not updated
+					take density as it is
+			it is family average
+				the family was updated
+					re-estimate density
+				the family was not updated
+					take density as it is
+
+"""
+
+
+
+# Estimar biomasa por cada parcela
