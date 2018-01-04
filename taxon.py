@@ -86,6 +86,8 @@ def check_names(names, minimum_score = 0.95 ,
 	resp = urllib2.urlopen(req)
 	result = json.loads(resp.read())
 
+	#print result
+
 	for nami in result[u'items']:
 
 		out = {
@@ -108,7 +110,9 @@ def check_names(names, minimum_score = 0.95 ,
 		if nami[u'scientificScore']:
 			nami[u'scientificScore'] = float(nami[u'scientificScore'])
 			out[u"resp"][u"score"] = nami[u'scientificScore']
-			if nami[u'scientificScore'] >= minimum_score: # Correct name in nami[nameScientific]
+			if nami[u'genusScore']:
+				nami[u'genusScore'] = float(nami[u'genusScore'])
+			if nami[u'scientificScore'] >= minimum_score or nami[u'genusScore'] == 1: # Correct name in nami[nameScientific]
 
 				if nami[u'family']:
 					out[u"resp"][u"family"] = nami[u'family']

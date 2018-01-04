@@ -2,13 +2,8 @@ import pandas as pd
 import sqlalchemy as al
 import numpy as np
 import pyproj
+import allometry
 
-"""
-De Quimera db:
-	1. Localización parcelas
-		-Estimar clase de bosque y
-	2. Datos dasométricos
-"""
 
 user = ''
 password = ''
@@ -29,41 +24,32 @@ outpr = pyproj.Proj(init='epsg:4326')
 par['holdridge'] = np.nan
 par['chave_for'] = np.nan
 
-def fortypes(row, inproj, outproj):
-	lon, lat = pyproj.transform(inproj, outproj, row.X, row.Y)
+def fortypes(row):
+	lon, lat = pyproj.transform(inpr, outpr, row.X, row.Y)
 	alt = allometry.altitude(lon, lat, ('/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_23.tif',
         '/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_33.tif'))
-	prep = allometry.precipitation(lon, lat, '/home/nelsonsalinas/Documents/WorldClim/v2/precipitation_30_sec')
-	row.holdridge = allometry.holdridge_col(alt, prep)
-	row.chave_for = allometry.chaveI_forest(prec)
-	return None
+	prec = allometry.precipitation(lon, lat, '/home/nelsonsalinas/Documents/WorldClim/v2/precipitation_30_sec')
+	row_holdridge = allometry.holdridge_col(alt, prec)
+	row_chave_for = allometry.chaveI_forest(prec)
+	return (row_holdridge, row_chave_for)
 
-par = par.apply(lambda x: fortypes(x, inpr, outpr))
+par.loc[:, 'holdridge'], par.loc[:, 'chave_for'] = zip(*par.apply(fortypes, axis = 1))
 
 # Compilar densidades
 
-"""
 
-for each taxon in densidades
-	taxon not updated
-	 	take the density as it is
-	taxon updated
-		check density source
-			it is specific
-				estimate new density
-			it is genus average
-				the genus was updated
-					re-estimate density
-				the genus was not updated
-					take density as it is
-			it is family average
-				the family was updated
-					re-estimate density
-				the family was not updated
-					take density as it is
+# Cargar Taxonomia
 
-"""
-
-
+tax = pd.read_sql_table(table_name='Taxonomia', con = conn, index_col='TaxonID')
 
 # Estimar biomasa por cada parcela
+
+for parita in par.itertuples():
+	query = "SELECT Diametro, Taxon FROM Individuos LEFT JOIN Determinaciones ON Dets=DetID WHERE Plot = {0}".format(par.PlotID)
+
+	meds = pd.read_sql_query(sql=query, con = conn)
+
+	for ind in meds.itertuples():
+
+		acctax = np.nan
+		while np.isnan(acctax):

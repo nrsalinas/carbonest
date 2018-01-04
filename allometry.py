@@ -211,9 +211,9 @@ def chaveI_forest(precipitation):
 
 	out = None
 
-	if year_prec <= 1500:
+	if precipitation <= 1500:
 		out = 'dry'
-	elif year_prec <= 3500:
+	elif precipitation <= 3500:
 		out = 'moist'
 	else:
 		out = 'wet'

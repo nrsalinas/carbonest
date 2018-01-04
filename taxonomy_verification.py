@@ -6,7 +6,7 @@ import taxon
 min_score = 0.95
 user = u""
 password = u""
-database = u"Quimera" # u'Quimera' or u'Taxon'
+database = u"" # u'Quimera' or u'Taxon'
 names_included = []
 ids_included = []
 TNRS_ID = None
