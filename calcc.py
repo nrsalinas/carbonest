@@ -3,11 +3,16 @@ import sqlalchemy as al
 import numpy as np
 import pyproj
 import allometry
+import wood_density as wd
 
 
 user = ''
 password = ''
 database = ''
+
+
+densities_file = 'gdddb.csv'
+
 
 engine = al.create_engine('mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1'.format(user, password, database))
 
@@ -37,6 +42,7 @@ par.loc[:, 'holdridge'], par.loc[:, 'chave_for'] = zip(*par.apply(fortypes, axis
 
 # Compilar densidades
 
+dens = wd(densities_file)
 
 # Cargar Taxonomia
 
@@ -44,12 +50,31 @@ tax = pd.read_sql_table(table_name='Taxonomia', con = conn, index_col='TaxonID')
 
 # Estimar biomasa por cada parcela
 
-for parita in par.itertuples():
-	query = "SELECT Diametro, Taxon FROM Individuos LEFT JOIN Determinaciones ON Dets=DetID WHERE Plot = {0}".format(par.PlotID)
+# columnas con valores de biomasa
+par['alvarez'] = np.nan
+par['chaveI'] = np.nan
+par['chaveII'] = np.nan
+
+for pari in par[:3].itertuples():
+	query = "SELECT Diametro, Taxon FROM Individuos LEFT JOIN Determinaciones ON Dets=DetID WHERE Plot = {0}".format(pari.PlotID)
 
 	meds = pd.read_sql_query(sql=query, con = conn)
 
 	for ind in meds.itertuples():
+		tax_accepted = ind.Taxon
+		dad = ind.SinonimoDe
+		while not np.isnan(dad):
+			tax_accepted = dad
+			dad = tax.loc[tax_accepted, 'SinonimoDe']
 
-		acctax = np.nan
-		while np.isnan(acctax):
+		family = tax.loc[tax_accepted, 'Familia']
+		genus = tax.loc[tax_accepted, 'Genero']
+		epithet = tax.loc[tax_accepted, 'Epiteto']
+
+		twd = wd.get_density(family, genus, epithet, dens)
+
+		par['alvarez'] = allometry.alvarez(ind.Diametro, twd, ind.holdridge)
+		par['chaveI'] = allometry.alvarez(ind.Diametro, twd, ind.chave_for)
+
+		lon, lat = pyproj.transform(inpr, outpr, ind.X, ind.Y)
+		par['chaveII'] = allometry.chaveII(ind.Diametro, twd, lon, lat, raster_file)
