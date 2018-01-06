@@ -30,7 +30,6 @@ def altitude(longitude, latitude, rasters):
 			pixelHeight = transform[5]
 			xEnd = xOrigin + pixelWidth * tras.RasterXSize
 			yEnd = yOrigin + pixelHeight * tras.RasterYSize
-			#print xOrigin, '<', longitude, '<' , xEnd, '|', yOrigin ,'>', latitude, '>', yEnd
 			if (xOrigin < longitude < xEnd) and (yOrigin > latitude > yEnd):
 				target_raster = rfile
 				break
@@ -64,7 +63,7 @@ def precipitation(longitude, latitude, raster_files):
 		while out < 0:
 			month_prec = []
 			for myfile in os.listdir(raster_files):
-				if myfile.endswith('.tif'):
+				if myfile.endswith('.tif') or myfile.endswith('.bil'):
 					prec_raster = gdal.Open(raster_files + '/' + myfile)
 					transform = prec_raster.GetGeoTransform()
 					xOrigin = transform[0]
@@ -184,7 +183,7 @@ def getE(longitude, latitude, raster_file):
 		px = int((longitude - xOrigin) / pixelWidth) #x pixel
 		py = int((latitude - yOrigin) / pixelHeight) #y pixel
 		intval = E_band.ReadAsArray(px,py,1,1)
-		out = intval[0][0]
+		out = float(intval[0][0])
 
 	else:
 		print "Function getE is not available: requires package gdal."
@@ -221,20 +220,22 @@ def chaveI_forest(precipitation):
 	return out
 
 
-def chave_height(diameter, longitude, latitude, raster_file):
+def chave_height(diameter, longitude=None, latitude=None, raster_file = None, e_value = None):
 	"""
 	Estimates tree height accordingly to allometric relation proposed by Chave
-	et al. 2014 (Global Change Biology 20: 3177-3190, eq 6A).
+	et al. 2014 (Global Change Biology 20: 3177-3190, eq 6A). It is necessary to
+	parse either a coefficient E value or all the info required to estimate it:
+	the path to a raster file modeling E, and the geographic coordinates of the
+	forest location.
 	"""
 	height = None
 
-	if GDAL:
+	if GDAL and longitude and latitude and raster_file and e_value is None:
 		E = getE(longitude, latitude, raster_file)
+
+	if isinstance(e_value, float):
 		logH = 0.893 - E + 0.760 * np.log(diameter) - 0.0340 * np.log(diameter)**2
 		height = np.exp(logH + 0.5 * 0.243**2)
-
-	else:
-		print "Function chave_height is not available: requires package gdal."
 
 	return height
 
@@ -260,29 +261,36 @@ def chaveI(diameter, density, forest_type):
 	"""
 
 	AGB = 0
-	c = 0.207 * np.log(diameter)**2
-	d = -0.028 * np.log(diameter)**3
-
-	if forest_type == 'dry':
-
-		a = -0.667
-		b = 1.784 * np.log(diameter)
-		AGB = density * np.exp(a + b + c + d)
-
-	elif forest_type == 'moist':
-
-		a = -1.499
-		b = 2.148 * np.log(diameter)
-		AGB = density * np.exp(a + b + c + d)
-
-	elif forest_type == 'wet':
-
-		a = -1.239
-		b = 1.980 * np.log(diameter)
-		AGB = density * np.exp(a + b + c + d)
+	if diameter < 1e-323:
+		pass
+		#
+		#Throw error, log will be inf
+		#
 
 	else:
-		raise ValueError
+		c = 0.207 * np.log(diameter)**2
+		d = -0.028 * np.log(diameter)**3
+
+		if forest_type == 'dry':
+
+			a = -0.667
+			b = 1.784 * np.log(diameter)
+			AGB = density * np.exp(a + b + c + d)
+
+		elif forest_type == 'moist':
+
+			a = -1.499
+			b = 2.148 * np.log(diameter)
+			AGB = density * np.exp(a + b + c + d)
+
+		elif forest_type == 'wet':
+
+			a = -1.239
+			b = 1.980 * np.log(diameter)
+			AGB = density * np.exp(a + b + c + d)
+
+		else:
+			raise ValueError
 
 	return AGB
 
@@ -356,11 +364,13 @@ def alvarez(diameter, density, forest_type):
 	return AGB
 
 
-def chaveII(diameter, density, longitud, latitude, raster_file):
+def chaveII(diameter, density, longitude = None, latitude = None, raster_file = None, e_value = None):
 	"""
 	Estimates tree biomass (Kg) through the allometric equation proposed by
-	Chave et al. 2014, Global Change Biology 20: 3177-3190 (Chave II). Returns a
-	float.
+	Chave et al. 2014, Global Change Biology 20: 3177-3190 (Chave II). It is
+	necessary to parse either a coefficient E value or all the info required to
+	estimate it: the path to the raster file modeling E, and the geographic
+	coordinates of the forest location. Returns a float.
 
 	Arguments:
 
@@ -370,17 +380,16 @@ def chaveII(diameter, density, longitud, latitude, raster_file):
 
 	- longitud, latitude (float): Geographic coordinates of the sampling site.
 
-	-raster_file (str): Path to the raster file of E as distributed by Chave.
+	- raster_file (str): Path to the raster file of E as distributed by Chave.
+
+	- e_value (float): Value of coefficient E.
 
 	"""
 	AGB = None
-	if GDAL:
-		E = getE(longitude, latitude, raster_file)
+	if GDAL and longitude and latitude and raster_file and e_value is None:
+		e_value = getE(longitude, latitude, raster_file)
 
-		AGB = np.exp(-1.802 - 0.976 * E + 0.976 * np.log(density) +
-				2.673 * np.log(diameter) - 0.029 * np.log(diameter)**2)
-
-	else:
-		print "Function chaveII is not available: requires package gdal."
+	if isinstance(e_value, float):
+		AGB = np.exp(-1.802 - 0.976 * e_value + 0.976 * np.log(density) + 2.673 * np.log(diameter) - 0.029 * np.log(diameter)**2)
 
 	return AGB

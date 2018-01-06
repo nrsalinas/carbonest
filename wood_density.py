@@ -22,8 +22,15 @@ def load_data(csv_file):
 				bits = row.split(",")
 				if bits[1] and bits[2] and bits[3]:
 					tidbits = bits[2].split(" ")
-					genus = tidbits[0]
-					epitet = tidbits[1]
+					if len(tidbits) == 2:
+						genus = tidbits[0]
+						epitet = tidbits[1]
+					elif len(tidbits) == 1:
+						genus = tidbits[0]
+						epitet = None
+					elif len(tidbits) == 3 and tidbits[1] == "X":
+						genus = tidbits[0]
+						epitet = tidbits[2]
 					if bits[1] not in out:
 						out[bits[1]] = {genus: { epitet: [float(bits[3])]}}
 					elif genus not in out[bits[1]]:
