@@ -2,7 +2,7 @@ import urllib2
 import json
 import re
 
-class Entity(object):
+class otu(object):
 	def __init__(self):
 		self.family = None
 		self.genus = None
@@ -40,9 +40,14 @@ class Entity(object):
 				self.genus = bits[0]
 				if len(bits) > 1:
 					self.epithet = bits[1]
-					if len(bits) == 4:
-						self.infraRank = bits[2]
-						self.infraEpithet = bits[3]
+					if len(bits) > 2:
+						if bits[2] in [u'var.', u'spp.', u'f.']:
+							self.infraRank = bits[2]
+							self.infraEpithet = bits[3]
+							if len(bits) > 4:
+								self.author = u' '.join(bits[4:])
+						else:
+							self.author = u' '.join(bits[2:])
 		return None
 
 
@@ -223,10 +228,15 @@ def extract_year(tropicos_string):
 	return out
 
 
-def tropicos(name, rank, api_key = u"1c2c3e36-2a97-4353-8a51-ab4c19a4d25b"):
+def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 	"""
 	rank : `sp` or `gen`
 	"""
+	api_key = ''
+	with open(file_api_key, 'r') as fh:
+		api_key = fh.read()
+	api_key = api_key.rstrip().decode('utf8')
+
 	service = u"http://services.tropicos.org/"
 
 	if isinstance(name, str):

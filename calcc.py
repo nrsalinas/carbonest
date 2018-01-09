@@ -49,15 +49,23 @@ par.loc[:, 'holdridge'], par.loc[:, 'chave_for'] = zip(*par.apply(fortypes, axis
 #
 # Verificar todos los taxa producen densidades > 0
 #
-dens = wd(densities_file)
+dens = wd.load_data(densities_file)
 
 # Cargar Taxonomia
 
 tax = pd.read_sql_table(table_name='Taxonomia', con = conn, index_col='TaxonID')
 
-#
-# Estimar densidades sobre DataFrame tax y añadirla como una nueva columna
-#
+tax['TaxonDef'] = np.int64
+
+for t in tax.itertuples():
+	tax_accepted = int(t.Index)
+	dad = t.SinonimoDe
+	while not np.isnan(dad):
+		tax_accepted = dad
+		dad = tax.loc[tax_accepted, 'SinonimoDe']
+	tax.loc[int(t.Index), 'TaxonDef' ] = tax_accepted
+
+tax['Densidad'] = tax.apply(lambda row: wd.get_density(row.Familia, row.Genero, row.Epiteto, dens), axis=1)
 
 # Estimar biomasa por cada parcela
 
@@ -96,25 +104,25 @@ for pari in par[:10].itertuples():
 
 		meds = pd.read_sql_query(sql=query, con = conn)
 
+		# densidad de madera promedio en la parcela
+		avewd = 0.0
+		avecount = 0
+		for ttax in meds.Taxon.unique():
+			twd = tax.loc[tax.loc[ttax, 'TaxonDef'], 'Densidad']
+			if twd > 0:
+				avewd += twd
+				avecount += 1
+		avewd /= avecount
+
 		for ind in meds.itertuples():
-			tax_accepted = ind.Taxon
-			if not np.isnan(tax_accepted):
-				dad = tax.loc[int(tax_accepted), 'SinonimoDe']
-				while not np.isnan(dad):
-					tax_accepted = dad
-					dad = tax.loc[int(tax_accepted), 'SinonimoDe']
+			twd = tax.loc[tax.loc[ind.Taxon, 'TaxonDef'], 'Densidad']
 
-				family = tax.loc[tax_accepted, 'Familia']
-				genus = tax.loc[tax_accepted, 'Genero']
-				epithet = tax.loc[tax_accepted, 'Epiteto']
+			if twd == 0:
+				twd = avewd
 
-				twd = wd.get_density(family, genus, epithet, dens)
-
-				this_alvarez += allometry.alvarez(ind.Diametro, twd, pari.holdridge)
-				this_chaveI += allometry.chaveI(ind.Diametro, twd, pari.chave_for)
-
-				#lon, lat = pyproj.transform(inpr, outpr, pari.X, pari.Y)
-				this_chaveII += allometry.chaveII(ind.Diametro, twd, e_value = float(pari.E))
+			this_alvarez += allometry.alvarez(ind.Diametro, twd, pari.holdridge)
+			#lon, lat = pyproj.transform(inpr, outpr, pari.X, pari.Y)
+			this_chaveII += allometry.chaveII(ind.Diametro, twd, e_value = float(pari.E))
 
 		par.loc[int(pari.Index) , 'alvarez'] = this_alvarez / pari.Area
 		par.loc[int(pari.Index) , 'chaveI'] = this_chaveI / pari.Area
