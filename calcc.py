@@ -51,11 +51,13 @@ par.loc[:, 'holdridge'], par.loc[:, 'chave_for'] = zip(*par.apply(fortypes, axis
 #
 dens = wd(densities_file)
 
-
-
 # Cargar Taxonomia
 
 tax = pd.read_sql_table(table_name='Taxonomia', con = conn, index_col='TaxonID')
+
+#
+# Estimar densidades sobre DataFrame tax y añadirla como una nueva columna
+#
 
 # Estimar biomasa por cada parcela
 
@@ -74,9 +76,14 @@ par['E'] = par.apply(estimate_E, axis=1)
 
 # Clases de bosque para los cuales la ecuacion de alvarez funciona
 alvhols = ['tropical_dry', 'tropical_moist', 'tropical_wet', 'premontane_moist', 'lower_montane_wet', 'montane_wet']
-#
-# Asignar aproximaciones a aquellas clase de bosque no consideradas por Alvarez
-#
+
+# Clases de bosque son cambiado a una categoria cercana usada por Alvarez que produzca menor biomasa
+forest_change = {'holdridge' : {'premontane_wet': 'lower_montane_wet',
+'lower_montane_moist': 'lower_montane_wet',
+'tropical_very_dry': 'tropical_dry',
+'montane_moist': 'lower_montane_wet'}}
+
+par.replace(to_replace = forest_change, inplace = True)
 
 for pari in par[:10].itertuples():
 
