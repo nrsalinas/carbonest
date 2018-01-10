@@ -12,8 +12,8 @@ class otu(object):
 		self.author = None
 		self.year = None
 
-	def unicode(self, author = False):
-		out = ""
+	def name(self, author = False):
+		out = u""
 		if self.genus:
 			if self.epithet:
 				if self.infraRank and self.infraEpithet:
@@ -26,6 +26,12 @@ class otu(object):
 			out = self.family
 		if author:
 			out += u" " + self.author
+		return out
+
+	def binomial(self):
+		out = u""
+		if self.genus and self.epithet:
+			out += self.genus + u" " + self.epithet
 		return out
 
 	def from_string(self, taxon_name):
@@ -206,8 +212,8 @@ def extract_year(tropicos_string):
 		bits = map(int, bits)
 		bits = sorted(bits, reverse = True)
 		out = bits[0]
-		if bits[0] > 2017:
-			print "This was printed in the future:", bits[0]
+		#if bits[0] > 2017:
+		#	print "\nLiterature from the future:", bits[0]
 
 	return out
 
@@ -233,11 +239,9 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 	in_name.from_string(name)
 	url_name = url_space(name)
 	query_id = []
-	search_name = otu()
-	search_name.year = 0
+	foundTaxa = []
 	search_resp = False
-
-	out_name = {}
+	out_name = None
 
 	if rank == 'sp' or rank == u'sp':
 		rank = u'sp.'
@@ -245,10 +249,21 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 		rank = u'gen.'
 
 	query = u"{0}name/search?apikey={1}&name={2}&format=json".format(service, api_key, url_name)
-
+	#print query
 	req = urllib2.Request(query)
-	resp = urllib2.urlopen(req)
-	result = json.loads(resp.read())
+	resp = None
+	result = None
+	try:
+		resp = urllib2.urlopen(req)
+	except urllib2.HTTPError:
+		pass
+	except:
+		raise
+
+	if resp:
+		result = json.loads(resp.read())
+	else:
+		return (in_name, None)
 
 	#print result
 	if not u"Error" in result[0]:
@@ -262,10 +277,12 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 
 				elif item[u'NomenclatureStatusName'] in [u'No opinion', u'nom. cons.', u'Legitimate']:
 					query_id.append(item[u'NameId'])
-					search_name.year = extract_year(item[u'DisplayDate'])
-					search_name.from_string(item[u'ScientificName'])
-					search_name.author = item[u'ScientificNameWithAuthors'].lstrip(item[u'ScientificName'])
-					search_name.family = item[u'Family']
+					tname = otu()
+					tname.year = extract_year(item[u'DisplayDate'])
+					tname.from_string(item[u'ScientificName'])
+					tname.author = item[u'ScientificNameWithAuthors'].lstrip(item[u'ScientificName'])
+					tname.family = item[u'Family']
+					foundTaxa.append(tname)
 					search_resp = True
 
 				else:
@@ -276,10 +293,16 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 		#print search_name, search_year
 
 		if len(query_id) > 1:
-			print "Multiple matches for",name,":",query_id
+			#print "Multiple matches for",name,":",query_id
+			foundTaxa = filter(lambda x: isinstance(x.year, int), foundTaxa)
+			#print foundTaxa
+			if len(foundTaxa) > 1:
+				foundTaxa = [sorted(foundTaxa, key=lambda x: x.year)[0]]
+			#print foundTaxa
+			#print "Selected year:", foundTaxa[0].year
 
-
-		elif len(query_id) == 1 and search_resp:
+		if len(foundTaxa) == 1 and search_resp:
+			search_name = foundTaxa[0]
 			accepted_name = otu()
 			accepted_name.year = 0
 			accepted_resp = False
@@ -354,3 +377,78 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 		out = (in_name, None)
 
 	return out
+
+
+def ipni(name):
+	service = u" http://www.ipni.org/ipni/advPlantNameSearch.do?"
+
+	if isinstance(name, str):
+		name = name.decode('utf8')
+	if not isinstance(name, unicode):
+		raise TypeError("Query should be a string or unicode.")
+
+	in_name = otu()
+	out_name = None
+	in_name.from_string(name)
+
+	if in_name.genus and in_name.epithet:
+		query = u"{0}find_genus={1}&find_species={2}&find_rankToReturn=spec&output_format=delimited-extended".format(service, in_name.genus, in_name.epithet)
+	elif in_name.genus:
+		query = u"{0}find_genus={1}&find_rankToReturn=gen&output_format=delimited-extended".format(service, in_name.genus)
+	else:
+		raise ValueError
+
+	#print query
+
+	req = urllib2.Request(query)
+	resp = urllib2.urlopen(req)
+	#result = json.loads(resp.read())
+	result = resp.read()
+	#print result
+
+	if result:
+		out_name = out()
+		out_name.year = 0
+		lines = result.split('\n')
+		cols = []
+		cols_size = 0
+		genus_i = None
+		species_i = None
+		year_i = None
+		family_i = None
+		for il,line in enumerate(lines):
+			line = line.rstrip()
+			if line:
+				tname = otu()
+				bits = line.split('%')
+				if bits and len(bits) > 4:
+				#print "bits length:",len(bits)
+
+					if il == 0:
+						cols = bits
+						cols_size = len(cols)
+						for ind, co in enumerate(cols):
+							if co == 'Genus':
+								genus_i = ind
+							elif co == 'Species':
+								species_i = ind
+							elif co == 'Publication year':
+								year_i = ind
+							elif co == 'Family':
+								family_i = ind
+					elif len(bits) == cols_size and year_int:
+						#print bits[year_i], bits[genus_i], bits[species_i] , bits[family_i]
+						if len(bits[year_i]) == 4:
+							tname.year = int(bits[year_i])
+						else:
+							tname.year = 1
+						tname.genus = bits[genus_i]
+						tname.epithet = bits[species_i]
+						tname.family = bits[family_i]
+
+						if tname.year < out_name.year:
+							out_name = tname
+			if out_name.family is None and out_name.genus is None:
+				out_name = None
+
+	return (in_name, out_name)
