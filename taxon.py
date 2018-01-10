@@ -10,6 +10,7 @@ class otu(object):
 		self.infraRank = None
 		self.infraEpithet = None
 		self.author = None
+		self.year = None
 
 	def unicode(self, author = False):
 		out = ""
@@ -139,74 +140,48 @@ def check_names(names, minimum_score = 0.95 ,
 	#print result
 
 	for nami in result[u'items']:
-
-		out = {
-			u"resp": {
-				u"family" : None,
-				u"genus" : None,
-				u"epithet" : None,
-				u"infraRank" : None,
-				u"infraEpithet" : None,
-				u"author" : None,
-				u"score" : None
-				},
-
-			u"query": None
-			}
+		out = (otu(), otu())
 
 		# get a dict similar to out[u"resp"] for the queried name
-		out[u"query"] = split_name(nami[u'nameSubmitted'])
+		out[0].from_string(nami[u'nameSubmitted'])
 
-		if nami[u'scientificScore']:
+		if nami[u'scientificScore'] or nami[u'genusScore']:
 			nami[u'scientificScore'] = float(nami[u'scientificScore'])
-			out[u"resp"][u"score"] = nami[u'scientificScore']
-			if nami[u'genusScore']:
-				nami[u'genusScore'] = float(nami[u'genusScore'])
+			nami[u'genusScore'] = float(nami[u'genusScore'])
+			#out[u"resp"][u"score"] = nami[u'scientificScore']
+
 			if nami[u'scientificScore'] >= minimum_score or nami[u'genusScore'] == 1: # Correct name in nami[nameScientific]
 
 				if nami[u'family']:
-					out[u"resp"][u"family"] = nami[u'family']
+					out[1].family = nami[u'family']
 
 				if accepted and nami[u'acceptedName']:
-					bits = nami[u'acceptedName'].split(u' ')
-					out[u"resp"][u"genus"] = bits[0]
-					out[u"resp"][u"author"] = nami[u'acceptedAuthor']
-
-					if len(bits) == 2:
-						out[u"resp"][u"epithet"] = bits[1]
-
-					if len(bits) == 4:
-						out[u"resp"][u"epithet"] = bits[1]
-						out[u"resp"][u"infraRank"] = bits[2]
-						out[u"resp"][u"infraEpithet"] = bits[3]
+					out[1].from_string(nami[u'acceptedName'])
+					out[1].author = nami[u'acceptedAuthor']
 
 				else:
-					if nami[u'genusScore']:
-						nami[u'genusScore'] = float(nami[u'genusScore'])
-						out[u"resp"][u"genus"] = nami[u'genus']
-						out[u"resp"][u"family"] = nami[u'family']
+					if nami[u'genusScore'] > minimum_score:
+						#nami[u'genusScore'] = float(nami[u'genusScore'])
+						out[1].genus = nami[u'genus']
+						out[1].family = nami[u'family']
 
 						if nami[u'epithetScore']:
 							nami[u'epithetScore'] = float(nami[u'epithetScore'])
-							out[u"resp"][u"epithet"] = nami[u'epithet']
+							if nami[u'epithetScore'] > minimum_score:
+								out[1].epithet = nami[u'epithet']
 
 							if nami[u'infraspecific1EpithetScore']:
 								nami[u'infraspecific1EpithetScore'] = float(nami[u'infraspecific1EpithetScore'])
-								out[u"resp"][u"infraEpithet"] = nami[u'infraspecific1Epithet']
+								if nami[u'infraspecific1EpithetScore'] > minimum_score:
+									out[1].infraEpithet = nami[u'infraspecific1Epithet']
+									if nami[u'nameScientific'].find(u' var. ') >= 0:
+										out[1].infraRank =  u"var."
+									elif nami[u'nameScientific'].find(u' subsp. ') >= 0:
+										out[1].infraRank =  u"subsp."
 
-								if nami[u'nameScientific'].find(u' var. ') >= 0:
-									out[u"resp"][u"infraRank"] =  u"var."
-								elif nami[u'nameScientific'].find(u' subsp. ') >= 0:
-									out[u"resp"][u"infraRank"] =  u"subsp."
-
-							# authorAttributed always retrieved
-							if nami[u'authorAttributed']:
-								out[u"resp"][u"author"] = nami[u'authorAttributed']
-
-					# authorScore only retrieved if queried author starts with upper case
-					#if nami[u'authorScore']:
-					#	nami[u'authorScore'] = float(nami[u'authorScore'])
-					#	myAuthor = nami[u'author']
+						# authorAttributed always retrieved
+						if nami[u'authorAttributed']:
+							out[1].author = nami[u'authorAttributed']
 
 		checked.append(out)
 
@@ -217,6 +192,15 @@ def extract_year(tropicos_string):
 	bits = re.split(r'\s+', tropicos_string)
 	bits = map(lambda x: re.sub(r'\D','',x), bits)
 	bits = filter(lambda x: len(x) >= 4, bits)
+
+	topop = []
+	toadd = []
+	for ind,b in enumerate(bits):
+		if len(b) == 8:
+			toadd += b[:4] + b[4:]
+			topop.append(b)
+	bits = filter(lambda x: x not in topop, bits)
+	bits += toadd
 
 	if len(bits):
 		bits = map(int, bits)
@@ -245,13 +229,12 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 	if not isinstance(name, unicode):
 		raise TypeError("Query should be a string or unicode.")
 
-	in_name = split_name(name)
+	in_name = otu()
+	in_name.from_string(name)
 	url_name = url_space(name)
 	query_id = []
-	search_year = 0
-	search_name = u''
-	search_author = u''
-	search_family = u''
+	search_name = otu()
+	search_name.year = 0
 	search_resp = False
 
 	out_name = {}
@@ -267,6 +250,7 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 	resp = urllib2.urlopen(req)
 	result = json.loads(resp.read())
 
+	#print result
 	if not u"Error" in result[0]:
 		#print "got something"
 		for item in result:
@@ -278,10 +262,10 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 
 				elif item[u'NomenclatureStatusName'] in [u'No opinion', u'nom. cons.', u'Legitimate']:
 					query_id.append(item[u'NameId'])
-					search_year = extract_year(item[u'DisplayDate'])
-					search_name = item[u'ScientificName']
-					search_author = item[u'ScientificNameWithAuthors'].lstrip(search_name)
-					search_family = item[u'Family']
+					search_name.year = extract_year(item[u'DisplayDate'])
+					search_name.from_string(item[u'ScientificName'])
+					search_name.author = item[u'ScientificNameWithAuthors'].lstrip(item[u'ScientificName'])
+					search_name.family = item[u'Family']
 					search_resp = True
 
 				else:
@@ -296,16 +280,13 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 
 
 		elif len(query_id) == 1 and search_resp:
-			accepted_year = 0
-			accepted_name = u""
-			accepted_author = u""
-			accepted_family = u""
+			accepted_name = otu()
+			accepted_name.year = 0
 			accepted_resp = False
-			synonym_year = 0
-			synonym_name = u""
-			synonym_author = u""
-			synonym_family = u""
+			synonym_name = otu()
+			synonym_name.year = 0
 			synonym_resp = False
+
 			# get accepted names
 			query = "{0}name/{1}/acceptednames?apikey={2}&format=json".format(service, query_id[0], api_key)
 
@@ -318,11 +299,11 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 				accepted_resp = True
 				for item in result:
 					tyear = extract_year(item[u'Reference'][u'TitlePageYear'])
-					if tyear > accepted_year:
-						accepted_year = tyear
-						accepted_name = item[u'AcceptedName'][u'ScientificName']
-						accepted_author = item[u'AcceptedName'][u'ScientificNameWithAuthors'].lstrip(accepted_name)
-						accepted_family = item[u'AcceptedName'][u'Family']
+					if tyear > accepted_name.year:
+						accepted_name.year = tyear
+						accepted_name.from_string(item[u'AcceptedName'][u'ScientificName'])
+						accepted_author = item[u'AcceptedName'][u'ScientificNameWithAuthors'].lstrip(item[u'AcceptedName'][u'ScientificName'])
+						accepted_name.family = item[u'AcceptedName'][u'Family']
 
 			# get synonyms
 			query = "{0}name/{1}/synonyms?apikey={2}&format=json".format(service, query_id[0], api_key)
@@ -335,56 +316,41 @@ def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 			if not u"Error" in result[0]:
 				synonym_resp = True
 				for item in result:
-					tyear = extract_year(item[u'Reference'][u'TitlePageYear'])
-					if tyear > synonym_year:
-						synonym_year = tyear
-						synonym_name = item[u'SynonymName'][u'ScientificName']
-						synonym_author = item[u'SynonymName'][u'ScientificNameWithAuthors'].lstrip(synonym_name)
-						synonym_family = item[u'SynonymName'][u'Family']
+					if u'TitlePageYear' in item[u'Reference']:
+						tyear = extract_year(item[u'Reference'][u'TitlePageYear'])
+						if tyear > synonym_name.year:
+							synonym_name.year = tyear
+							synonym_name.from_string(item[u'SynonymName'][u'ScientificName'])
+							synonym_name.author = item[u'SynonymName'][u'ScientificNameWithAuthors'].lstrip(item[u'SynonymName'][u'ScientificName'])
+							synonym_name.family = item[u'SynonymName'][u'Family']
 
-			if accepted_year > 0 and synonym_year > 0 and accepted_resp and synonym_resp:
-				if accepted_year > synonym_year:
-					out_name = split_name(accepted_name)
-					out_name[u'family'] = accepted_family
-					out_name[u'author'] = accepted_author
-				elif accepted_year < synonym_year:
-					out_name = split_name(synonym_name)
-					out_name[u'family'] = synonym_family
-					out_name[u'author'] = synonym_author
+			#print search_name.year, search_resp
+			#print accepted_name.year, accepted_resp
+			#print synonym_name.year, synonym_resp
 
-			elif accepted_year > 0 and accepted_resp:
-				if search_year < accepted_year:
-					out_name = split_name(accepted_name)
-					out_name[u'family'] = accepted_family
-					out_name[u'author'] = accepted_author
+			if accepted_name.year > 0 and synonym_name.year > 0 and accepted_resp and synonym_resp:
+				if accepted_name.year > synonym_name.year:
+					out_name = accepted_name
+
+				elif accepted_name.year <= synonym_name.year:
+					out_name = search_name
+
+			elif accepted_name.year > 0 and accepted_resp:
+				if search_name.year < accepted_name.year:
+					out_name = accepted_name
+
 				else:
-					out_name = split_name(search_name)
-					out_name[u'family'] = search_family
-					out_name[u'author'] = search_author
+					out_name = search_name
 
-			elif synonym_year > 0 and synonym_resp:
-				if search_year < synonym_year:
-					out_name = split_name(synonym_name)
-					out_name[u'family'] = synonym_family
-					out_name[u'author'] = synonym_author
-				else:
-					out_name = split_name(search_name)
-					out_name[u'family'] = search_family
-					out_name[u'author'] = search_author
-
-			elif search_year > 0 and search_resp:
-				out_name = split_name(search_name)
-				out_name[u'family'] = search_family
-				out_name[u'author'] = search_author
+			elif (synonym_name.year > 0 and synonym_resp) or search_resp:
+				out_name = search_name
 
 			else:
 				out_name = None
 
-			#print "accepted_resp", accepted_resp, "query_resp", query_resp
 
-		out = {u'query': in_name, u'resp':out_name}
+		out = (in_name, out_name)
 	else:
-		out = {u'query': in_name, u'resp': None}
-	#print "search_resp", search_resp
+		out = (in_name, None)
 
 	return out
