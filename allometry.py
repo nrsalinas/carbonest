@@ -9,7 +9,8 @@ except ImportError as e:
 	if e.message == "No module named gdal":
 		print "Warning: functions based on data from raster files will not be available. "
 	else:
-		raise
+		#raise
+		pass
 except:
 	raise
 
@@ -393,3 +394,32 @@ def chaveII(diameter, density, longitude = None, latitude = None, raster_file = 
 		AGB = np.exp(-1.802 - 0.976 * e_value + 0.976 * np.log(density) + 2.673 * np.log(diameter) - 0.029 * np.log(diameter)**2)
 
 	return AGB
+
+
+def det_vol(diams, length, tilts = None):
+	"""
+	Estimates the volumen of detrites per area (m^3 / ha).
+
+	Arguments:
+
+	- diams (iterable): Diameter measurements, one by wood piece (cm).
+
+	- length (float): Distance measurements were done upon (m).
+
+	- tilts (iterable): Slope angles of pieces (degrees). It is recommended to
+	exclude values greater than 85 degrees.
+
+	"""
+
+	vol = 0
+
+	if tilts and len(diams) == len(tilts):
+		for d,t in zip(diams, tilts):
+			vol += d ** 2 / np.cos(np.radians(t))
+	else:
+		for d in diams:
+			vol += d ** 2
+
+	vol *= (np.pi**2 / 8)
+
+	return vol

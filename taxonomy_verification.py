@@ -2,6 +2,7 @@ import pandas as pd
 import sqlalchemy as al
 import re
 import taxon
+import codecs
 
 min_score = 0.95
 user = u"root"
@@ -167,12 +168,12 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 			continue
 
 	if len(bffrlog) > 5000:
-		with open(logfile, "a") as fh:
+		with codecs.open(logfile, "a", encoding='utf8') as fh:
 			fh.write(bffrlog)
 		bffrlog = ""
 
 if len(bffrlog):
-	with open(logfile, "a") as fh:
+	with codecs.open(logfile, "a", encoding='utf8') as fh:
 		fh.write(bffrlog)
 	bffrlog = ""
 

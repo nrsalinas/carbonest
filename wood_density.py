@@ -1,6 +1,8 @@
 """
 Wood density functions.
 """
+from math import log, exp
+
 
 def load_data(csv_file):
 	"""
@@ -22,27 +24,28 @@ def load_data(csv_file):
 				bits = row.split(",")
 				if bits[1] and bits[2] and bits[3]:
 					tidbits = bits[2].split(" ")
+					family = bits[1].title()
 					if len(tidbits) == 2:
-						genus = tidbits[0]
-						epitet = tidbits[1]
+						genus = tidbits[0].title()
+						epitet = tidbits[1].lower()
 					elif len(tidbits) == 1:
-						genus = tidbits[0]
+						genus = tidbits[0].title()
 						epitet = None
-					elif len(tidbits) == 3 and tidbits[1] == "X":
-						genus = tidbits[0]
-						epitet = tidbits[2]
-					if bits[1] not in out:
-						out[bits[1]] = {genus: { epitet: [float(bits[3])]}}
-					elif genus not in out[bits[1]]:
-						out[bits[1]][genus] = {epitet: [float(bits[3])]}
-					elif epitet not in out[bits[1]][genus]:
-						out[bits[1]][genus][epitet] = [float(bits[3])]
+					elif len(tidbits) == 3 and tidbits[1].upper() == "X":
+						genus = tidbits[0].title()
+						epitet = tidbits[2].lower()
+					if family not in out:
+						out[family] = {genus: { epitet: [float(bits[3])]}}
+					elif genus not in out[family]:
+						out[family][genus] = {epitet: [float(bits[3])]}
+					elif epitet not in out[family][genus]:
+						out[family][genus][epitet] = [float(bits[3])]
 					else:
-						out[bits[1]][genus][epitet].append(float(bits[3]))
+						out[family][genus][epitet].append(float(bits[3]))
 	return out
 
 
-def get_density(family, genus, epitet, wd_data):
+def get_density(family, genus, epithet, wd_data):
 	"""
 	Retrieves wood density of a taxon from a wood density database object. If
 	the species or genus is not included in the DB, an average of the associated
@@ -61,12 +64,19 @@ def get_density(family, genus, epitet, wd_data):
 
 	"""
 	out = 0.0
+	if family:
+		family = family.title()
+	if genus:
+		genus = genus.title()
+	if epithet:
+		epithet = epithet.lower()
+
 	if family is not None and family in wd_data:
 		if genus is not None and genus in wd_data[family]:
-			if epitet is not None and epitet in wd_data[family][genus]:
-				if len(wd_data[family][genus][epitet]) >= 1:
-					out = sum(wd_data[family][genus][epitet])
-					out /= len(wd_data[family][genus][epitet])
+			if epithet is not None and epithet in wd_data[family][genus]:
+				if len(wd_data[family][genus][epithet]) >= 1:
+					out = sum(wd_data[family][genus][epithet])
+					out /= len(wd_data[family][genus][epithet])
 				else:
 					print "{0} {1} included in the wood density DB but no values associated.".format(genus, epitet)
 			else:
@@ -82,4 +92,40 @@ def get_density(family, genus, epitet, wd_data):
 					out += sum(wd_data[family][other_gen][other_sp])
 					spp_count += len(wd_data[family][other_gen][other_sp])
 			out /= spp_count
+	return out
+
+
+
+def pnt(depth, iters = 20):
+	"""
+	Estimates wood density from penetrometer data.
+
+	Arguments:
+
+	- depth (float): Maximum distance reached into the wood sample (cm) after 20
+	hit iterations. Should be less or equal to 20 cm.
+
+	- iters (int): Number of 1 Kgr hits. Should be less than 20.
+
+	"""
+	out = 0.0
+	I = 0
+	P = 0
+	if 0 < depth <= 20 and 1 < iters <= 20 and \
+		((iters < 20 and depth == 20) or (iters == 20 and depth <= 20)):
+
+		if depth > 1:
+			I = 1
+
+		if iters == 20:
+			P = depth / 20.0
+
+	 	elif iters < 20:
+			P = 20.0 / (iters - 0.5)
+
+		out = 0.6451 - 0.388 * log(depth, 10) - 0.377 * I + 0.3 * log(depth, 10)
+
+	else:
+		raise ValueError("Non valid values of penetrometer depth ({0}) and drop iterations ({1}).".format(depth, iters))
+
 	return out
