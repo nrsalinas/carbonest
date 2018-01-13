@@ -10,8 +10,8 @@ user = ''
 password = ''
 database = ''
 
-# Archivos (o carpetas) neesarios para los computos
-densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180104.csv'
+# Archivos (o carpetas) necesarios para los computos
+densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180110.csv'
 
 elevation_rasters = ('/home/nelson/Documents/GIS/Elevation/alt_30s_bil/alt.bil',)
 #elevation_rasters = ('/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_23.tif', '/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_33.tif')
@@ -19,8 +19,9 @@ precipitation_raster_folder = '/home/nelson/Documents/IDEAM/WorldClim_v2/precipi
 #precipitation_raster_folder = '/home/nelsonsalinas/Documents/WorldClim/v2/precipitation_30_sec'
 chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_E/E.bil'
 
-engine = al.create_engine('mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(user, password, database))
-#engine = al.create_engine('mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1'.format(user, password, database))
+engine = al.create_engine(
+	'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(
+	user, password, database))
 
 conn = engine.connect()
 
@@ -53,19 +54,27 @@ dens = wd.load_data(densities_file)
 
 # Cargar Taxonomia
 
-tax = pd.read_sql_table(table_name='Taxonomia', con = conn, index_col='TaxonID')
+tax = pd.read_sql_table(table_name='Taxonomia', con = conn)
 
 tax['TaxonDef'] = np.int64
 
 for t in tax.itertuples():
-	tax_accepted = int(t.Index)
+	tax_accepted = int(t.TaxonID)
 	dad = t.SinonimoDe
-	while not np.isnan(dad):
-		tax_accepted = dad
-		dad = tax.loc[tax_accepted, 'SinonimoDe']
-	tax.loc[int(t.Index), 'TaxonDef' ] = tax_accepted
+	while pd.notna(dad):
+		tax_accepted = int(dad)
+		dad = tax[tax.TaxonID == tax_accepted]['SinonimoDe'].item()
+	tax.loc[tax.TaxonID == t.TaxonID, 'TaxonDef' ] = tax_accepted
 
-tax['Densidad'] = tax.apply(lambda row: wd.get_density(row.Familia, row.Genero, row.Epiteto, dens), axis=1)
+
+def density_updated(row):
+	taxacc = row.TaxonDef
+	fam = tax[tax.TaxonID == taxacc]['Familia'].item()
+	gen = tax[tax.TaxonID == taxacc]['Genero'].item()
+	epi = tax[tax.TaxonID == taxacc]['Epiteto'].item()
+	return wd.get_density(fam, gen, epi, dens)
+
+tax['Densidad'] = tax.apply(density_updated , axis =1)
 
 # Estimar biomasa por cada parcela
 

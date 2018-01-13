@@ -10,6 +10,10 @@ Version 3:
 
 - Tablas Analizador, Carbono y Fertilidad incluidas.
 
+Version 4:
+
+- No foreign keys
+
 ###########################################################*/
 
 DROP DATABASE IF EXISTS IFN;
@@ -243,7 +247,7 @@ INSERT INTO Fuentes (FuenteID, Nombre, Acronimo, Year)
 
 
 
-# Foreign keys
+/*# Foreign keys
 ALTER TABLE Analizador
 ADD FOREIGN KEY anlz2plot (Plot)
 REFERENCES Conglomerados (PlotID)
@@ -297,3 +301,4 @@ ADD FOREIGN KEY tax2fuent (Fuente)
 REFERENCES Fuentes (FuenteID)
 ON DELETE RESTRICT
 ON UPDATE CASCADE;
+*/

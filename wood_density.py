@@ -2,6 +2,7 @@
 Wood density functions.
 """
 from math import log, exp
+from pandas import isna, notna
 
 
 def load_data(csv_file):
@@ -63,17 +64,18 @@ def get_density(family, genus, epithet, wd_data):
 	wood_density.load_data.
 
 	"""
-	out = 0.0
-	if family:
+	out = None
+	if notna(family):
 		family = family.title()
-	if genus:
+	if notna(genus):
 		genus = genus.title()
-	if epithet:
+	if notna(epithet):
 		epithet = epithet.lower()
 
-	if family is not None and family in wd_data:
-		if genus is not None and genus in wd_data[family]:
-			if epithet is not None and epithet in wd_data[family][genus]:
+	if notna(family) and family in wd_data:
+		out = 0.0
+		if notna(genus) and genus in wd_data[family]:
+			if notna(epithet) and epithet in wd_data[family][genus]:
 				if len(wd_data[family][genus][epithet]) >= 1:
 					out = sum(wd_data[family][genus][epithet])
 					out /= len(wd_data[family][genus][epithet])
@@ -92,6 +94,7 @@ def get_density(family, genus, epithet, wd_data):
 					out += sum(wd_data[family][other_gen][other_sp])
 					spp_count += len(wd_data[family][other_gen][other_sp])
 			out /= spp_count
+
 	return out
 
 
