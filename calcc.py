@@ -5,13 +5,12 @@ import pyproj
 import allometry
 import wood_density as wd
 
-
 user = ''
 password = ''
 database = ''
 
 # Archivos (o carpetas) necesarios para los computos
-densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180110.csv'
+densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180113.csv'
 
 elevation_rasters = ('/home/nelson/Documents/GIS/Elevation/alt_30s_bil/alt.bil',)
 #elevation_rasters = ('/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_23.tif', '/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_33.tif')
@@ -47,14 +46,20 @@ def fortypes(row):
 par.loc[:, 'holdridge'], par.loc[:, 'chave_for'] = zip(*par.apply(fortypes, axis = 1))
 
 # Compilar densidades
-#
-# Verificar todos los taxa producen densidades > 0
-#
 dens = wd.load_data(densities_file)
 
 # Cargar Taxonomia
-
 tax = pd.read_sql_table(table_name='Taxonomia', con = conn)
+
+# Las siguientes familias son taxa prodominantemente no arboreos y son excluidos de los computos
+herb_families =  [u'Aizoaceae', u'Alstroemeriaceae', u'Araceae', u'Aristolochiaceae', u'Athyriaceae', u'Blechnaceae', u'Campanulaceae', u'Commelinaceae', u'Cucurbitaceae', u'Cyatheaceae', u'Cyclanthaceae', u'Cyperaceae', u'Dennstaedtiaceae', u'Dicksoniaceae', u'Dryopteridaceae', u'Francoaceae', u'Gesneriaceae', u'Gunneraceae', u'Heliconiaceae', u'Lomariopsidaceae', u'Marantaceae', u'Marcgraviaceae', u'Musaceae', u'Orchidaceae', u'Poaceae', u'Pteridaceae', u'Smilacaceae', u'Strelitziaceae', u'Woodsiaceae', u'Zingiberaceae']
+fd
+
+"""############################################################################
+# Probablemente no sea buena idea eliminar estos registros, tal vez se originen
+# referencias huerfanas a tax.TaxonDef
+############################################################################"""
+tax.drop(tax[tax.Familia.isin(herb_families)].index, inplace = True)
 
 tax['TaxonDef'] = np.int64
 
