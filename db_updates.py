@@ -8,9 +8,9 @@ and `IFN_20180113.sql`.
 import sqlalchemy as al
 import pandas as pd
 
-user = ""
-password = ""
-database = ""
+user = "root"
+password = "Soledad1"
+database = "Quimera"
 
 
 # Archivo csv con la clasificacion actualizada de las plantas con semilla.
@@ -77,5 +77,13 @@ for fam in tax.Familia.unique():
 		tax.loc[((tax.Familia == fam) & tax.Genero.isna() & tax.Epiteto.notna()), 'SinonimoDe'] = tax[(tax.Familia == fam) & tax.Genero.isna() & tax.Epiteto.isna()]['TaxonID'].item()
 
 tax.to_sql("Taxonomia", conn, if_exists="replace", index = False)
+
+# Corregir el error de numeracion de determinaciones en Quimera
+if database == 'Quimera':
+	inds = pd.read_sql_table(table_name='Individuos',con=conn)
+	if inds.iloc[0].Dets == 0:
+		inds.Dets += 1
+		inds.to_sql("Individuos", conn, if_exists="replace", index = False, chunksize = 10000)
+
 
 conn.close()

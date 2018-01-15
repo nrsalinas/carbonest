@@ -186,6 +186,19 @@ def getE(longitude, latitude, raster_file):
 		intval = E_band.ReadAsArray(px,py,1,1)
 		out = float(intval[0][0])
 
+		# Sampling neighbors if E in px,py is -inf
+		rad = 1
+		while abs(out) == np.inf:
+			newee = []
+			for pxi in [(px-rad), (px+rad)]:
+				for pyi in [(py-rad),(py+rad)]:
+					intval = E_band.ReadAsArray(pxi,pyi,1,1)
+					newee.append(float(intval[0][0]))
+			newee = filter(lambda w: abs(w) != np.inf, newee)
+			if len(newee):
+				out = sum(newee) / len(newee)
+			rad += 1
+
 	else:
 		print "Function getE is not available: requires package gdal."
 
