@@ -8,9 +8,9 @@ and `IFN_20180113.sql`.
 import sqlalchemy as al
 import pandas as pd
 
-user = "root"
-password = "Soledad1"
-database = "Quimera"
+user = ""
+password = ""
+database = ""
 
 
 # Archivo csv con la clasificacion actualizada de las plantas con semilla.

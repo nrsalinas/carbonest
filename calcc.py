@@ -5,9 +5,9 @@ import pyproj
 import allometry
 import wood_density as wd
 
-user = 'root'
-password = 'Soledad1'
-database = 'Quimera'
+user = ''
+password = ''
+database = ''
 
 # Archivos (o carpetas) necesarios para los computos
 densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180113.csv'
