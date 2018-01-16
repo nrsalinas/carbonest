@@ -9,14 +9,38 @@ user = ''
 password = ''
 database = ''
 
-# Archivos (o carpetas) necesarios para los computos
-densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180113.csv'
+# Conteo de pixeles de bosques 2016. Cada pixel corresponde a 0.008333333333 ** 2
+# grados = 0.8605475872847063 km^2
+for_type_count = {
+'chaveI':
+	{'dry': 16247, 'moist': 600836, 'wet': 75316},
 
-elevation_rasters = ('/home/nelson/Documents/GIS/Elevation/alt_30s_bil/alt.bil',)
-#elevation_rasters = ('/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_23.tif', '/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_33.tif')
-precipitation_raster_folder = '/home/nelson/Documents/IDEAM/WorldClim_v2/precipitation'
-#precipitation_raster_folder = '/home/nelsonsalinas/Documents/WorldClim/v2/precipitation_30_sec'
-chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_E/E.bil'
+'holdrigde':
+	{'lower_montane_dry': 116,
+	'lower_montane_moist': 20510,
+	'lower_montane_rain': 1,
+	'lower_montane_wet': 13994,
+	'montane_moist': 385,
+	'montane_wet': 10537,
+	'premontane_moist': 15677,
+	'premontane_rain': 200,
+	'premontane_wet': 26985,
+	'tropical_dry': 7689,
+	'tropical_moist': 544705,
+	'tropical_rain': 1,
+	'tropical_very_dry': 594,
+	'tropical_wet': 51005}}
+
+# Archivos (o carpetas) necesarios para los computos
+#densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180113.csv'
+densities_file = '/home/nelsonsalinas/Documents/wood_density_db/ChaveDB/gwddb_20180113.csv'
+
+#elevation_rasters = ('/home/nelson/Documents/GIS/Elevation/alt_30s_bil/alt.bil',)
+elevation_rasters = ('/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_23.tif', '/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_33.tif')
+#precipitation_raster_folder = '/home/nelson/Documents/IDEAM/WorldClim_v2/precipitation'
+precipitation_raster_folder = '/home/nelsonsalinas/Documents/WorldClim/v2/precipitation_30_sec'
+#chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_E/E.bil'
+chave_E_raster = '/home/nelsonsalinas/Documents/Chave_cartography/E.tif'
 
 engine = al.create_engine(
 	'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(
@@ -51,17 +75,6 @@ dens = wd.load_data(densities_file)
 # Cargar Taxonomia
 tax = pd.read_sql_table(table_name='Taxonomia', con = conn)
 
-# Las siguientes familias son taxa prodominantemente no arboreos y son excluidos de los computos
-herb_families =  [u'Aizoaceae', u'Alstroemeriaceae', u'Araceae', u'Aristolochiaceae', u'Athyriaceae', u'Blechnaceae', u'Campanulaceae', u'Commelinaceae', u'Cucurbitaceae', u'Cyatheaceae', u'Cyclanthaceae', u'Cyperaceae', u'Dennstaedtiaceae', u'Dicksoniaceae', u'Dryopteridaceae', u'Francoaceae', u'Gesneriaceae', u'Gunneraceae', u'Heliconiaceae', u'Lomariopsidaceae', u'Marantaceae', u'Marcgraviaceae', u'Musaceae', u'Orchidaceae', u'Poaceae', u'Pteridaceae', u'Smilacaceae', u'Strelitziaceae', u'Woodsiaceae', u'Zingiberaceae']
-
-herb_tax_def = tax.loc[tax.Familia.isin(herb_families), 'TaxonDef'].tolist()
-
-"""############################################################################
-# Probablemente no sea buena idea eliminar estos registros, tal vez se originen
-# referencias huerfanas a tax.TaxonDef
-############################################################################"""
-#tax.drop(tax[tax.Familia.isin(herb_families)].index, inplace = True)
-
 tax['TaxonDef'] = np.int64
 
 for t in tax.itertuples():
@@ -71,6 +84,11 @@ for t in tax.itertuples():
 		tax_accepted = int(dad)
 		dad = tax[tax.TaxonID == tax_accepted]['SinonimoDe'].item()
 	tax.loc[tax.TaxonID == t.TaxonID, 'TaxonDef' ] = tax_accepted
+
+# Las siguientes familias son taxa prodominantemente no arboreos y son excluidos de los computos
+herb_families =  [u'Aizoaceae', u'Alstroemeriaceae', u'Araceae', u'Aristolochiaceae', u'Athyriaceae', u'Blechnaceae', u'Campanulaceae', u'Commelinaceae', u'Cucurbitaceae', u'Cyatheaceae', u'Cyclanthaceae', u'Cyperaceae', u'Dennstaedtiaceae', u'Dicksoniaceae', u'Dryopteridaceae', u'Francoaceae', u'Gesneriaceae', u'Gunneraceae', u'Heliconiaceae', u'Lomariopsidaceae', u'Marantaceae', u'Marcgraviaceae', u'Musaceae', u'Orchidaceae', u'Poaceae', u'Pteridaceae', u'Smilacaceae', u'Strelitziaceae', u'Woodsiaceae', u'Zingiberaceae']
+
+herb_tax_def = tax.loc[tax.Familia.isin(herb_families), 'TaxonDef'].tolist()
 
 
 def density_updated(row):
@@ -112,7 +130,7 @@ par.replace(to_replace = forest_change, inplace = True)
 NNID = tax.loc[tax.Familia.isna() & tax.Genero.isna() & tax.Epiteto.isna(), 'TaxonID'].item()
 par_skipped = []
 for pari in par.itertuples():
-	print pari.Index
+	#print pari.Index
 	#if pari.holdridge in alvhols:
 
 	this_alvarez = 0
@@ -180,4 +198,4 @@ for pari in par.itertuples():
 
 conn.close()
 
-par[['alvarez','chaveI','chaveII']].to_csv('biomass_quimera_20180114.csv', index_label='PlotID')
+par[['alvarez','chaveI','chaveII']].to_csv('biomass_quimera_20180116.csv', index_label='PlotID')
