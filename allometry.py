@@ -411,7 +411,7 @@ def chaveII(diameter, density, longitude = None, latitude = None, raster_file = 
 
 def det_vol(diams, length, tilts = None):
 	"""
-	Estimates the volumen of detrites per area (m^3 / ha).
+	Estimates volumen of detrites per unit area (m^3 / ha).
 
 	Arguments:
 

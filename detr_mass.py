@@ -5,9 +5,11 @@ import wood_density as wd
 import allometry
 
 
-user = ''
-password = ''
-database = ''
+user = 'root'
+password = 'Soledad1'
+database = 'IFN'
+
+trans = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 
 engine = al.create_engine('mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(user, password, database))
@@ -26,10 +28,20 @@ det.loc[det.Diametro2.notna(), 'DAP'] = (det[det.Diametro2.notna()]['Diametro1']
 #
 
 # Verificar en cual extremo de las secciones de los transectos se realizaron las mediciones
-start = int()
-if len(det[(det.Plot == 7921) & (det.Distancia >= 9)]) > len(det[(det.Plot == 7921) & (det.Distancia <= 1)]):
-    start = 9
-else:
-    start = 0
+for tr in trans:
 
-if len(det[(det.Plot == 7921) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]):
+	start = int()
+	if len(det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia >= 9)]) > len(det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia <= 1)]):
+	    start = 9
+	else:
+	    start = 0
+
+	if len(det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]):
+
+		diams = det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]['DAP'].tolist()
+
+		incls = det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]['Inclinacion'].tolist()
+
+		diams, incls = zip(*filter(lambda x: not x[0] is None and not x[1] is None, zip(diams, incls)))
+
+		vol = allometry.det_vol(diams, 1, incls)
