@@ -1,6 +1,8 @@
 import numpy as np
 import os
 
+np.seterr(over='raise')
+
 GDAL = 0
 try:
 	import gdal
@@ -172,6 +174,7 @@ def getE(longitude, latitude, raster_file):
 	http://chave.ups-tlse.fr/pantropical_allometry/E.bil.zip. Returns a float.
 	"""
 	out = None
+	min_value = -10.0
 
 	if GDAL:
 		E_raster = gdal.Open(raster_file)
@@ -188,13 +191,15 @@ def getE(longitude, latitude, raster_file):
 
 		# Sampling neighbors if E in px,py is -inf
 		rad = 1
-		while abs(out) == np.inf:
+		while abs(out) == np.inf or out < min_value:
 			newee = []
 			for pxi in [(px-rad), (px+rad)]:
 				for pyi in [(py-rad),(py+rad)]:
-					intval = E_band.ReadAsArray(pxi,pyi,1,1)
-					newee.append(float(intval[0][0]))
+					if pxi > 0 and pyi > 0 and pxi <= E_raster.RasterXSize and pyi <= E_raster.RasterYSize:
+						intval = E_band.ReadAsArray(pxi,pyi,1,1)
+						newee.append(float(intval[0][0]))
 			newee = filter(lambda w: abs(w) != np.inf, newee)
+			newee = filter(lambda w: w > min_value, newee)
 			if len(newee):
 				out = sum(newee) / len(newee)
 			rad += 1
@@ -403,7 +408,7 @@ def chaveII(diameter, density, longitude = None, latitude = None, raster_file = 
 	if GDAL and longitude and latitude and raster_file and e_value is None:
 		e_value = getE(longitude, latitude, raster_file)
 
-	if isinstance(e_value, float):
+	if isinstance(e_value, float) or isinstance(e_value, int):
 		AGB = np.exp(-1.802 - 0.976 * e_value + 0.976 * np.log(density) + 2.673 * np.log(diameter) - 0.029 * np.log(diameter)**2)
 
 	return AGB

@@ -22,26 +22,46 @@ det.drop(det[det.Diametro1.isna()].index, inplace=True)
 det['DAP'] = np.nan
 det.loc[det.Diametro2.isna(), 'DAP'] = det[det.Diametro2.isna()]['Diametro1']
 det.loc[det.Diametro2.notna(), 'DAP'] = (det[det.Diametro2.notna()]['Diametro1'] + \
-    det[det.Diametro2.notna()]['Diametro2']) / 2.0
-#
-# Para cada parcela
-#
+	det[det.Diametro2.notna()]['Diametro2']) / 2.0
 
-# Verificar en cual extremo de las secciones de los transectos se realizaron las mediciones
-for tr in trans:
+congl = pd.read_sql_table(table_name='Conglomerados', con = conn, index_col='PlotID')
 
-	start = int()
-	if len(det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia >= 9)]) > len(det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia <= 1)]):
-	    start = 9
-	else:
-	    start = 0
+congl['Volumen'] = 0.0
 
-	if len(det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]):
+for congli in congl.itertuples():
 
-		diams = det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]['DAP'].tolist()
+	tran_count = 0
+	for tr in trans:
 
-		incls = det[(det.Transecto == tr) & (det.Plot == 7921) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]['Inclinacion'].tolist()
+		######################################################
+		# Corregir secciones!!!
+		######################################################
+		if len(det[(det.Transecto == tr) & (det.Plot == int(congli.Index))]):
 
-		diams, incls = zip(*filter(lambda x: not x[0] is None and not x[1] is None, zip(diams, incls)))
+			# Verificar en cual extremo de las secciones de los transectos se realizaron las mediciones
+			start = int()
+			if len(det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia >= 9)]) > len(det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia <= 1)]):
+				start = 9
+			else:
+				start = 0
 
-		vol = allometry.det_vol(diams, 1, incls)
+			if len(det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]):
+
+				diams = det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]['DAP'].tolist()
+				diams = filter(lambda x: pd.notna(x), diams)
+
+				incls = det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]['Inclinacion'].tolist()
+				incls = filter(lambda x: pd.notna(x), incls)
+
+				if len(diams) == len(incls) > 0:
+
+					if diams and incls:
+
+						diams, incls = zip(*filter(lambda x: 85 >= x[1] >= -85, zip(diams, incls)))
+
+						if diams and incls:
+
+							congl.loc[int(congli.Index) , 'Volumen'] += allometry.det_vol(diams, 1, incls)
+							tran_count += 1
+
+	congl.loc[int(congli.Index) , 'Volumen'] /= tran_count

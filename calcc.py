@@ -5,9 +5,11 @@ import pyproj
 import allometry
 import wood_density as wd
 
-user = ''
-password = ''
-database = ''
+#np.seterr(over = 'raise')
+
+user = 'root'
+password = 'Soledad1'
+database = 'Quimera'
 
 # Conteo de pixeles de bosques 2016. Cada pixel corresponde a 0.008333333333 ** 2
 # grados = 0.8605475872847063 km^2
@@ -48,7 +50,16 @@ engine = al.create_engine(
 
 conn = engine.connect()
 
-par = pd.read_sql_table(table_name='Parcelas', con = conn, index_col='PlotID')
+if database == "Quimera":
+	par = pd.read_sql_table(table_name='Parcelas', con = conn, index_col='PlotID')
+
+elif database == "IFN":
+	par = pd.read_sql_table(table_name='Conglomerados', con = conn)
+	coors = pd.read_sql_table(table_name='Coordenadas', con = conn)
+	coors = coors.rename(columns={'Plot':'PlotID'})
+	par = par.merge(coors[['Longitud', 'Latitud', 'PlotID']], on='PlotID', how='left')
+	par.set_index('PlotID')
+
 
 # WGS 84 zone 18 N projection
 inpr = pyproj.Proj('+proj=utm +zone=18 +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
@@ -129,6 +140,8 @@ par.replace(to_replace = forest_change, inplace = True)
 # TaxonID de indet absoluto
 NNID = tax.loc[tax.Familia.isna() & tax.Genero.isna() & tax.Epiteto.isna(), 'TaxonID'].item()
 par_skipped = []
+#failed_par = [182, 183, 484]
+#for pari in par.itertuples():
 for pari in par.itertuples():
 	#print pari.Index
 	#if pari.holdridge in alvhols:
@@ -186,11 +199,13 @@ for pari in par.itertuples():
 			if twd <= 0:
 				print "Density is illegal"
 
-			this_alvarez += allometry.alvarez(tree.Diametro, twd, pari.holdridge)
-			#lon, lat = pyproj.transform(inpr, outpr, pari.X, pari.Y)
-			this_chaveII += allometry.chaveII(tree.Diametro, twd, e_value = float(pari.E))
-			this_chaveI += allometry.chaveI(tree.Diametro, twd, pari.chave_for)
-
+			try:
+				this_alvarez += allometry.alvarez(tree.Diametro, twd, pari.holdridge)
+				#lon, lat = pyproj.transform(inpr, outpr, pari.X, pari.Y)
+				this_chaveII += allometry.chaveII(tree.Diametro, twd, e_value = float(pari.E))
+				this_chaveI += allometry.chaveI(tree.Diametro, twd, pari.chave_for)
+			except:
+				print "Plot: {0}, Individuo: {1}, Taxon: {2}, Diametro: {3}, Densidad: {4}, E: {5}".format(pari.Index, tree.IndividuoID, tree.Taxon, tree.Diametro, twd, pari.E)
 
 	par.loc[int(pari.Index) , 'alvarez'] = this_alvarez / pari.Area
 	par.loc[int(pari.Index) , 'chaveI'] = this_chaveI / pari.Area
@@ -198,4 +213,4 @@ for pari in par.itertuples():
 
 conn.close()
 
-par[['alvarez','chaveI','chaveII']].to_csv('biomass_quimera_20180116.csv', index_label='PlotID')
+par[['alvarez','chaveI','chaveII']].to_csv('biomass_quimera_20180117.csv', index_label='PlotID')
