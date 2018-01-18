@@ -52,7 +52,7 @@ def altitude(longitude, latitude, rasters):
 	return out
 
 
-def precipitation(longitude, latitude, raster_files):
+def precipitation_old(longitude, latitude, raster_files):
 	"""
 	Estimates yearly aggregated precipitation from monthly data.
 
@@ -91,6 +91,44 @@ def precipitation(longitude, latitude, raster_files):
 
 	return out
 
+def precipitation(longitude, latitude, raster_file):
+	"""
+	Estimates yearly aggregated precipitation from monthly data.
+
+	- raster_files (str): Raster files of annual precipitation. Should
+	follow WorldClim v2 filename standard (*.tif).
+	"""
+	out = None
+	radius = 0
+	if GDAL:
+		out = -1
+		while out < 0:
+			prec = []
+			if raster_file.endswith('.tif') or raster_file.endswith('.bil'):
+				prec_raster = gdal.Open(raster_file)
+				transform = prec_raster.GetGeoTransform()
+				xOrigin = transform[0]
+				yOrigin = transform[3]
+				pixelWidth = transform[1]
+				pixelHeight = transform[5]
+				prec_band = prec_raster.GetRasterBand(1)
+				px = int((longitude - xOrigin) / pixelWidth) #x pixel
+				py = int((latitude - yOrigin) / pixelHeight) #y pixel
+				pxs = [px-radius, px+radius]
+				pys = [py-radius, py+radius]
+				for npx in pxs:
+					for npy in pys:
+						if npx > 0 and npy > 0 and npx <= prec_raster.RasterXSize and npy <= prec_raster.RasterYSize:
+							intval = prec_band.ReadAsArray(npx,npy,1,1)
+							if intval[0][0] > 0:
+								prec.append(intval[0][0])
+				prec = filter(lambda w: abs(w) != np.inf, prec)
+			if len(prec):
+				out = sum(prec) / float(len(prec))
+
+			radius += 1
+
+	return out
 
 def holdridge_col(altitude, precipitation):
 	"""

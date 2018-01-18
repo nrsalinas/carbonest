@@ -5,11 +5,10 @@ import pyproj
 import allometry
 import wood_density as wd
 
-#np.seterr(over = 'raise')
 
-user = 'root'
-password = 'Soledad1'
-database = 'Quimera'
+user = ''
+password = ''
+database = ''
 
 # Conteo de pixeles de bosques 2016. Cada pixel corresponde a 0.008333333333 ** 2
 # grados = 0.8605475872847063 km^2
@@ -34,15 +33,15 @@ for_type_count = {
 	'tropical_wet': 51005}}
 
 # Archivos (o carpetas) necesarios para los computos
-#densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180113.csv'
-densities_file = '/home/nelsonsalinas/Documents/wood_density_db/ChaveDB/gwddb_20180113.csv'
+densities_file = '/home/nelson/Documents/IDEAM/GlobalWoodDensityDB/gwddb_20180113.csv'
+#densities_file = '/home/nelsonsalinas/Documents/wood_density_db/ChaveDB/gwddb_20180113.csv'
 
-#elevation_rasters = ('/home/nelson/Documents/GIS/Elevation/alt_30s_bil/alt.bil',)
-elevation_rasters = ('/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_23.tif', '/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_33.tif')
-#precipitation_raster_folder = '/home/nelson/Documents/IDEAM/WorldClim_v2/precipitation'
-precipitation_raster_folder = '/home/nelsonsalinas/Documents/WorldClim/v2/precipitation_30_sec'
-#chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_E/E.bil'
-chave_E_raster = '/home/nelsonsalinas/Documents/Chave_cartography/E.tif'
+elevation_rasters = ('/home/nelson/Documents/IDEAM/cust_layers/alt.tif',)
+#elevation_rasters = ('/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_23.tif', '/home/nelsonsalinas/Documents/WorldClim/v1/alt/alt_33.tif')
+precipitation_raster = '/home/nelson/Documents/IDEAM/cust_layers/precp.tif'
+#precipitation_raster_folder = '/home/nelsonsalinas/Documents/WorldClim/v2/precipitation_30_sec'
+chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_E/E.bil'
+#chave_E_raster = '/home/nelsonsalinas/Documents/Chave_cartography/E.tif'
 
 engine = al.create_engine(
 	'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(
@@ -50,6 +49,7 @@ engine = al.create_engine(
 
 conn = engine.connect()
 
+par = None
 if database == "Quimera":
 	par = pd.read_sql_table(table_name='Parcelas', con = conn, index_col='PlotID')
 
@@ -57,8 +57,8 @@ elif database == "IFN":
 	par = pd.read_sql_table(table_name='Conglomerados', con = conn)
 	coors = pd.read_sql_table(table_name='Coordenadas', con = conn)
 	coors = coors.rename(columns={'Plot':'PlotID'})
-	par = par.merge(coors[['Longitud', 'Latitud', 'PlotID']], on='PlotID', how='left')
-	par.set_index('PlotID')
+	par = par.merge(coors[coors.SPF == 1][['Longitud', 'Latitud', 'PlotID']], on='PlotID', how='left')
+	par = par.set_index('PlotID')
 
 
 # WGS 84 zone 18 N projection
@@ -70,15 +70,31 @@ outpr = pyproj.Proj(init='epsg:4326')
 par['holdridge'] = np.nan
 par['chave_for'] = np.nan
 
-def fortypes(row):
-	lon, lat = pyproj.transform(inpr, outpr, row.X, row.Y)
+def holdtypes(row):
+	lon, lat = float(), float()
+	if database == "IFN":
+		lon = row.Longitud
+		lat = row.Latitud
+	elif database == "Quimera":
+		lon, lat = pyproj.transform(inpr, outpr, row.X, row.Y)
 	alt = allometry.altitude(lon, lat, elevation_rasters)
-	prec = allometry.precipitation(lon, lat, precipitation_raster_folder)
+	prec = allometry.precipitation(lon, lat, precipitation_raster)
 	row_holdridge = allometry.holdridge_col(alt, prec)
-	row_chave_for = allometry.chaveI_forest(prec)
-	return (row_holdridge, row_chave_for)
+	return row_holdridge
 
-par.loc[:, 'holdridge'], par.loc[:, 'chave_for'] = zip(*par.apply(fortypes, axis = 1))
+def chavetypes(row):
+	lon, lat = float(), float()
+	if database == "IFN":
+		lon = row.Longitud
+		lat = row.Latitud
+	elif database == "Quimera":
+		lon, lat = pyproj.transform(inpr, outpr, row.X, row.Y)
+	prec = allometry.precipitation(lon, lat, precipitation_raster)
+	row_chave_for = allometry.chaveI_forest(prec)
+	return row_chave_for
+
+par['holdridge'] = par.apply(holdtypes, axis=1)
+par['chave_for'] = par.apply(chavetypes, axis = 1)
 
 # Compilar densidades
 dens = wd.load_data(densities_file)
@@ -111,8 +127,6 @@ def density_updated(row):
 
 tax['Densidad'] = tax.apply(density_updated , axis =1)
 
-# Estimar biomasa por cada parcela
-
 # columnas con valores de biomasa
 par['alvarez'] = np.nan
 par['chaveI'] = np.nan
@@ -120,7 +134,12 @@ par['chaveII'] = np.nan
 
 # Estimacion coefficiente E de Chave
 def estimate_E(row):
-	lon, lat = pyproj.transform(inpr, outpr, row.X, row.Y)
+	lon, lat = int(), int()
+	if database == "Quimera":
+		lon, lat = pyproj.transform(inpr, outpr, row.X, row.Y)
+	elif database == "IFN":
+		lon = row.Longitud
+		lat = row.Latitud
 	e_val = allometry.getE(lon, lat, chave_E_raster)
 	return e_val
 
@@ -142,7 +161,7 @@ NNID = tax.loc[tax.Familia.isna() & tax.Genero.isna() & tax.Epiteto.isna(), 'Tax
 par_skipped = []
 #failed_par = [182, 183, 484]
 #for pari in par.itertuples():
-for pari in par.itertuples():
+for pari in par[:20].itertuples():
 	#print pari.Index
 	#if pari.holdridge in alvhols:
 
@@ -150,7 +169,13 @@ for pari in par.itertuples():
 	this_chaveI = 0
 	this_chaveII = 0
 
-	query = "SELECT Diametro, Taxon, IndividuoID FROM Individuos LEFT JOIN Determinaciones ON Dets=DetID WHERE Plot = {0}".format(pari.Index)
+	if database == "Quimera":
+		"SELECT Diametro, Taxon, IndividuoID FROM Individuos LEFT JOIN Determinaciones ON Dets=DetID WHERE Plot = {0}".format(pari.Index)
+	elif database == "IFN":
+		######################################################################
+		# Resolver Individuos con Dets = NULL
+		######################################################################
+		query = "SELECT DiametroP AS Diametro, Taxon, TalloID, IndividuoID FROM Tallos LEFT JOIN Individuos ON Individuo = IndividuoID LEFT JOIN Determinaciones ON Dets=DetID WHERE Plot = {0} AND Dets IS NOT NULL".format(pari.Index)
 
 	meds = pd.read_sql_query(sql=query, con = conn)
 
@@ -162,8 +187,13 @@ for pari in par.itertuples():
 	# Eliminar taxa herbarceos
 	meds.drop(meds[meds.Taxon.isin(herb_tax_def)].index, inplace = True)
 
+	if meds.shape[0] == 0:
+		par_skipped.append(pari.Index)
+		continue
+
+	print meds.Taxon.unique()
 	# Si ningun individuo esta determinado pasar a la siguiente parcela
-	if len(filter(lambda x: tax.loc[tax.TaxonID == x, 'TaxonDef'].item() != NNID, meds.Taxon.unique())) == 0:
+	if len(filter(lambda x: tax.loc[tax.TaxonID == int(x), 'TaxonDef'].item() != NNID, meds.Taxon.unique())) == 0:
 		par_skipped.append(pari.Index)
 		continue
 
@@ -207,9 +237,17 @@ for pari in par.itertuples():
 			except:
 				print "Plot: {0}, Individuo: {1}, Taxon: {2}, Diametro: {3}, Densidad: {4}, E: {5}".format(pari.Index, tree.IndividuoID, tree.Taxon, tree.Diametro, twd, pari.E)
 
-	par.loc[int(pari.Index) , 'alvarez'] = this_alvarez / pari.Area
-	par.loc[int(pari.Index) , 'chaveI'] = this_chaveI / pari.Area
-	par.loc[int(pari.Index) , 'chaveII'] = this_chaveII / pari.Area
+	area = float()
+	if database == "Quimera":
+		area = pari.Area
+	else:
+		area = 28.3 # or 154 or 707
+
+	par.loc[int(pari.Index) , 'alvarez'] = this_alvarez / area
+	par.loc[int(pari.Index) , 'chaveI'] = this_chaveI / area
+	par.loc[int(pari.Index) , 'chaveII'] = this_chaveII / area
+
+
 
 conn.close()
 
