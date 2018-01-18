@@ -17,27 +17,16 @@ except:
 	raise
 
 
-def altitude(longitude, latitude, rasters):
+def altitude(longitude, latitude, raster):
 	"""
 	rasters = Iterable of raster file paths where the location maybe be found.
 	"""
 	out = None
+	radius = 0
 	if GDAL:
-		target_raster = None
-		for rfile in rasters:
-			tras = gdal.Open(rfile)
-			transform = tras.GetGeoTransform()
-			xOrigin = transform[0]
-			yOrigin = transform[3]
-			pixelWidth = transform[1]
-			pixelHeight = transform[5]
-			xEnd = xOrigin + pixelWidth * tras.RasterXSize
-			yEnd = yOrigin + pixelHeight * tras.RasterYSize
-			if (xOrigin < longitude < xEnd) and (yOrigin > latitude > yEnd):
-				target_raster = rfile
-				break
-		if target_raster is not None:
-			myras = gdal.Open(rfile)
+		while out is None:
+			alt = []
+			myras = gdal.Open(raster)
 			transform = myras.GetGeoTransform()
 			xOrigin = transform[0]
 			yOrigin = transform[3]
@@ -45,9 +34,18 @@ def altitude(longitude, latitude, rasters):
 			pixelHeight = transform[5]
 			px = int((longitude - xOrigin) / pixelWidth) #x pixel
 			py = int((latitude - yOrigin) / pixelHeight) #y pixel
-			myband = myras.GetRasterBand(1)
-			intval = myband.ReadAsArray(px,py,1,1)
-			out = intval[0][0]
+			pxs = [px-radius, px+radius]
+			pys = [py-radius, py+radius]
+			for npx in pxs:
+				for npy in pys:
+					if npx > 0 and npy > 0 and npx <= myras.RasterXSize and npy <= myras.RasterYSize:
+						intval = myras.ReadAsArray(npx,npy,1,1)
+						if intval[0][0] > -100:
+							alt.append(intval[0][0])
+			alt = filter(lambda w: abs(w) != np.inf, alt)
+			if len(alt):
+				out = sum(alt) / float(len(alt))
+			radius += 1
 
 	return out
 
