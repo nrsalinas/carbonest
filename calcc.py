@@ -1,3 +1,23 @@
+################################################################################
+#
+# Estimación de biomasa arborea a partir de datos de vegetación contenidos
+# en las bases de datos IFN y Quimera del SMBYC - IDEAM.
+#
+# El output de la ejecucion del presente script es una tabla en formato
+# csv que contiene:
+# 1. el indice de la parcela dentro de la base de datos
+# 2. longitud
+# 3. latitud
+# 4. zona de vida de Holdridge
+# 5. clase de bosque de acuerdo a Chave et al. 2005
+# 6. densidad de carbono, ecuacion de Alvarez et al. 2012 (tons / ha)
+# 7. densidad de carbono, ecuacion de Chave et al. 2005 (tons / ha)
+# 8. densidad de carbono, ecuacion de Chave et al. 2014 (tons / ha)
+#
+# El nombre del archivo de salida se declara con la variable `outfile`.
+#
+################################################################################
+
 import pandas as pd
 import sqlalchemy as al
 import numpy as np
@@ -5,10 +25,12 @@ import pyproj
 import allometry
 import wood_density as wd
 
-
+# Variables de configuración de acceso a la base de datos
 user = ''
 password = ''
 database = ''
+
+# Nombre del archivo output
 #outfile = 'biomass_Quimera_20180118.csv'
 outfile = 'biomass_IFN_20180118.csv'
 
@@ -58,7 +80,6 @@ elif database == "IFN":
 	coors = coors.rename(columns={'Plot':'PlotID'})
 	par = par.merge(coors[coors.SPF == 1][['Longitud', 'Latitud', 'PlotID']], on='PlotID', how='left')
 	par = par.set_index('PlotID')
-
 
 
 par['holdridge'] = np.nan
@@ -116,9 +137,6 @@ def estimate_E(row):
 
 par['E'] = par.apply(estimate_E, axis=1)
 
-# Clases de bosque para los cuales la ecuacion de alvarez funciona
-#alvhols = ['tropical_dry', 'tropical_moist', 'tropical_wet', 'premontane_moist', 'lower_montane_wet', 'montane_wet']
-
 # Clases de bosque son cambiado a una categoria cercana usada por Alvarez que produzca menor biomasa
 forest_change = {'holdridge' : {'premontane_wet': 'lower_montane_wet',
 'lower_montane_moist': 'lower_montane_wet',
@@ -130,8 +148,6 @@ par.replace(to_replace = forest_change, inplace = True)
 # TaxonID de indet absoluto
 NNID = tax.loc[tax.Familia.isna() & tax.Genero.isna() & tax.Epiteto.isna(), 'TaxonID'].item()
 par_skipped = []
-#failed_par = [182, 183, 484]
-#for pari in par.itertuples():
 
 area_ifn = {'L':28.3, 'F':153.9, 'FG':706.9}
 
@@ -141,8 +157,6 @@ par['chaveI'] = np.nan
 par['chaveII'] = np.nan
 
 for pari in par.itertuples():
-	#print pari.Index
-	#if pari.holdridge in alvhols:
 
 	this_alvarez = 0
 	this_chaveI = 0
@@ -152,9 +166,7 @@ for pari in par.itertuples():
 		query = "SELECT Diametro, Taxon, IndividuoID FROM Individuos LEFT JOIN Determinaciones ON Dets=DetID WHERE Plot = {0}".format(pari.Index)
 
 	elif database == "IFN":
-		######################################################################
-		# Resolver Individuos con Dets = NULL
-		######################################################################
+		# Individuos sin Dets son muetos en pie no identificados
 		query = "SELECT DiametroP AS Diametro, Tamano, Taxon, TalloID, IndividuoID FROM Tallos LEFT JOIN Individuos ON Individuo = IndividuoID LEFT JOIN Determinaciones ON Dets=DetID WHERE Plot = {0} AND Dets IS NOT NULL AND Tamano IN ('L', 'F', 'FG')".format(pari.Index)
 
 	meds = pd.read_sql_query(sql=query, con = conn)
@@ -189,7 +201,6 @@ for pari in par.itertuples():
 
 	if avewd == 0:
 		print "avewd is zero"
-	#print "average wood density: {0} (based on {1} individuals)".format(avewd, avecount)
 
 	for tree in meds.itertuples():
 		twd = 0
@@ -201,9 +212,6 @@ for pari in par.itertuples():
 			else:
 				twd = avewd
 				ttaxdef = tax.loc[tax.TaxonID == tree.Taxon, 'TaxonDef'].item()
-				#print tax.loc[tax.TaxonID == ttaxdef, 'Familia'].item(),
-				#print tax.loc[tax.TaxonID == ttaxdef, 'Genero'].item(),
-				#print tax.loc[tax.TaxonID == ttaxdef, 'Epiteto'].item(),"got no wood density"
 
 			if twd <= 0:
 				print "Density is illegal"
@@ -231,4 +239,4 @@ for pari in par.itertuples():
 
 conn.close()
 
-par[['holdridge','chave_for','alvarez','chaveI','chaveII']].to_csv(outfile, index_label='PlotID')
+par[['Longitud','Latitud','holdridge','chave_for','alvarez','chaveI','chaveII']].to_csv(outfile, index_label='PlotID')

@@ -1,18 +1,32 @@
+################################################################################
+#
+# Estimacion de la extención de las clases climáticas de Holdridge (1966) y
+# Chave (2005). Se requieren tres archivos ráster: altitud, precipitación y
+# extensión de cobertura de bosque. Todos los ráster deben tener la misma
+# proyección.
+#
+# El archivo de salida es un `pickle` de un diccionario anidado de Python. Las
+# claves del primer nivel del diccionario es el sistema de clasificación
+# ('holdridge' o 'chave'), las claves del segundo son las clases, y los valores
+# son el conteo de pixeles correspondiente.    
+#
+################################################################################
 import gdal
 import numpy as np
 import allometry
 import pickle
 
+# Archivos de entrada
 alt_file = "/home/nelsonsalinas/Documents/cust_layers/alt/vent_alt.tif"
-
 prec_file = "/home/nelsonsalinas/Documents/cust_layers/precp/precp.tif"
-
 #for_file = "/home/nelsonsalinas/Documents/Cartografia_SIAC/bosque_no_bosque_2016/BQNBQ_2016_EPSG4326.tif"
 for_file = "/home/nelsonsalinas/Documents/Cartografia_SIAC/bosque_no_bosque_2015/BQNBQ_2015_EPSG4326.tif"
 
+# Archivo de salida
+outfile = "for_pix_count.pkl"
+
 alt_ras = gdal.Open(alt_file)
 prec_ras = gdal.Open(prec_file)
-
 for_ras = gdal.Open(for_file)
 
 transform = alt_ras.GetGeoTransform()
@@ -73,4 +87,4 @@ while not it.finished:
 							for_type_count['chaveI'][chave] += 1
 	it.iternext()
 
-pickle.dump(for_type_count, open("for_pix_count.pkl","w"))
+pickle.dump(for_type_count, open(outfile,"w"))
