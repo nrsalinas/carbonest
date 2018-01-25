@@ -445,7 +445,7 @@ def chaveII(diameter, density, longitude = None, latitude = None, raster_file = 
 		e_value = getE(longitude, latitude, raster_file)
 
 	if isinstance(e_value, float) or isinstance(e_value, int):
-		AGB = np.exp(-1.802 - 0.976 * e_value + 0.976 * np.log(density) + 2.673 * np.log(diameter) - 0.029 * np.log(diameter)**2)
+		AGB = np.exp(-1.803 - 0.976 * e_value + 0.976 * np.log(density) + 2.673 * np.log(diameter) - 0.0299 * np.log(diameter)**2)
 
 	return AGB
 
