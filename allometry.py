@@ -302,7 +302,8 @@ def chave_height(diameter, longitude=None, latitude=None, raster_file = None, e_
 def chaveI(diameter, density, forest_type):
 	"""
 	Estimates tree biomass (Kg) through the allometric equation proposed by
-	Chave et al. 2005, Oecologia 145: 87-99 (Chave I). Returns a float.
+	Chave et al. 2005, Oecologia 145: 87-99 (Chave I, as published by Phillips
+	et al. 2016, Forest Ecology and Management 374: 119-128). Returns a float.
 
 	Arguments:
 
@@ -341,6 +342,58 @@ def chaveI(diameter, density, forest_type):
 		elif forest_type == 'wet':
 
 			a = -1.239
+			b = 1.980 * np.log(diameter)
+			AGB = density * np.exp(a + b + c + d)
+
+		else:
+			raise ValueError
+
+	return AGB
+
+
+def chaveI_original(diameter, density, forest_type):
+	"""
+	Estimates tree biomass (Kg) through the allometric equation proposed by
+	Chave et al. 2005, Oecologia 145: 87-99 (Chave I, as published by the
+	authors). Returns a float.
+
+	Arguments:
+
+	- diameter (float): Diameter (cm) at breast height of the tree.
+
+	- density (float); Wood density (gr/cm^3).
+
+	- forest_type (str): Climatic clasification of the sampling site. Valid
+	values are `dry`, `moist`, and `wet`.
+
+	"""
+
+	AGB = 0
+	if diameter < 1e-323:
+		pass
+		#
+		#Throw error, log will be inf
+		#
+
+	else:
+		c = 0.207 * np.log(diameter)**2
+		d = -0.028 * np.log(diameter)**3
+
+		if forest_type == 'dry':
+
+			a = -0.730
+			b = 1.784 * np.log(diameter)
+			AGB = density * np.exp(a + b + c + d)
+
+		elif forest_type == 'moist':
+
+			a = -1.562
+			b = 2.148 * np.log(diameter)
+			AGB = density * np.exp(a + b + c + d)
+
+		elif forest_type == 'wet':
+
+			a = -1.302
 			b = 1.980 * np.log(diameter)
 			AGB = density * np.exp(a + b + c + d)
 
