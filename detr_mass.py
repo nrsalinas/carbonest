@@ -5,14 +5,12 @@ import wood_density as wd
 import allometry
 
 
-user = 'root'
-password = 'Soledad1'
-database = 'IFN'
-
-trans = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-
+user = ''
+password = ''
+database = ''
 
 engine = al.create_engine('mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(user, password, database))
+
 conn = engine.connect()
 
 det = pd.read_sql_table("Detritos", con = conn, index_col="DetritoID")
@@ -26,42 +24,42 @@ det.loc[det.Diametro2.notna(), 'DAP'] = (det[det.Diametro2.notna()]['Diametro1']
 
 congl = pd.read_sql_table(table_name='Conglomerados', con = conn, index_col='PlotID')
 
-congl['Volumen'] = 0.0
+congl['Volumen_ha'] = 0.0
+congl['Densidad_ha'] = 0.0
 
 for congli in congl.itertuples():
 
-	tran_count = 0
-	for tr in trans:
+	secc_count = 0
+	for tr in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
 
-		######################################################
-		# Corregir secciones!!!
-		######################################################
-		if len(det[(det.Transecto == tr) & (det.Plot == int(congli.Index))]):
+		for sec in range(1,4):
 
-			# Verificar en cual extremo de las secciones de los transectos se realizaron las mediciones
-			start = int()
-			if len(det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia >= 9)]) > len(det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia <= 1)]):
-				start = 9
-			else:
-				start = 0
+			if len(det[(det.Transecto == tr) & (det.Seccion == sec) & (det.Plot == int(congli.Index))]):
 
-			if len(det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]):
+				# Verificar en cual extremo de las secciones de los transectos se realizaron las mediciones
+				start = int()
+				if len(det[(det.Transecto == tr) & (det.Seccion == sec) & (det.Plot == int(congli.Index)) & (det.Distancia >= 9)]) > len(det[(det.Transecto == tr) & (det.Seccion == sec) & (det.Plot == int(congli.Index)) & (det.Distancia <= 1)]):
+					start = 9
+				else:
+					start = 0
 
-				diams = det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]['DAP'].tolist()
-				diams = filter(lambda x: pd.notna(x), diams)
+				if len(det[(det.Transecto == tr) & (det.Seccion == sec) & (det.Plot == int(congli.Index)) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]):
 
-				incls = det[(det.Transecto == tr) & (det.Plot == int(congli.Index)) & (det.Distancia >= start) & (det.Distancia <= (start + 1))]['Inclinacion'].tolist()
-				incls = filter(lambda x: pd.notna(x), incls)
+					th_dets = det[(det.Transecto == tr) & (det.Seccion == sec) & (det.Plot == int(congli.Index)) & (det.Distancia >= start) & (det.Distancia <= (start + 1))][['DAP','Inclinacion','Densidad']]
 
-				if len(diams) == len(incls) > 0:
+					th_dets = th_dets[th_dets.DAP.notna() & th_dets.Inclinacion.notna() & th_dets.Densidad.notna()]
+					th_dets = th_dets[(th_dets.Inclinacion <= 85) & (th_dets.Inclinacion >= -85)]
 
-					if diams and incls:
+					if len(th_dets) > 0:
+						diams = th_dets.DAP.tolist()
+						incls = th_dets.Inclinacion.tolist()
+						dens = th_dets.Densidad.tolist()
+						congl.loc[int(congli.Index) , 'Volumen_ha'] += allometry.det_vol(diams, 1, incls)
+						congl.loc[int(congli.Index) , 'Densidad_ha'] += allometry.det_density(dens, diams, 1, incls)
+						secc_count += 1
 
-						diams, incls = zip(*filter(lambda x: 85 >= x[1] >= -85, zip(diams, incls)))
+	if secc_count:
+		congl.loc[int(congli.Index) , 'Volumen_ha'] /= secc_count
+		congl.loc[int(congli.Index) , 'Densidad_ha'] /= secc_count
 
-						if diams and incls:
-
-							congl.loc[int(congli.Index) , 'Volumen'] += allometry.det_vol(diams, 1, incls)
-							tran_count += 1
-
-	congl.loc[int(congli.Index) , 'Volumen'] /= tran_count
+conn.close()

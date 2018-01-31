@@ -530,3 +530,40 @@ def det_vol(diams, length, tilts = None):
 	vol *= (np.pi**2 / 8)
 
 	return vol
+
+
+def det_density(dens, diams, length, tilts = None):
+	"""
+	Estimates detrite wood density per unit area [gr / (cm^3 * ha)].
+
+	Arguments:
+
+	- dens (iterable): Wood densities, one value per piece (gr/cm^3)
+
+	- diams (iterable): Diameter measurements, one by wood piece (cm).
+
+	- length (float): Distance measurements were done upon (m).
+
+	- tilts (iterable): Slope angles of pieces (degrees). It is recommended to
+	exclude values greater than 85 degrees.
+
+	"""
+
+	vol = 0
+	vols = []
+	dens_weighted = []
+
+	if tilts and len(diams) == len(tilts):
+		for d,t in zip(diams, tilts):
+			this_vol = d ** 2 / np.cos(np.radians(t))
+			vols.append(this_vol)
+			vol += this_vol
+	else:
+		for d in diams:
+			this_vol = d ** 2
+			vols.append(this_vol)
+			vol += this_vol
+
+	dens_weighted = [d * (v / vol) for d,v in zip(dens, vols)]
+
+	return sum(dens_weighted)

@@ -98,10 +98,9 @@ def get_density(family, genus, epithet, wd_data):
 	return out
 
 
-
 def pnt(depth, iters = 20):
 	"""
-	Estimates wood density from penetrometer data.
+	Estimates wood density (gr/cm^3) from penetrometer data.
 
 	Arguments:
 
