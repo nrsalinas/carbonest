@@ -4,6 +4,13 @@ import numpy as np
 import wood_density as wd
 import allometry
 
+################################################################################
+#
+# Es necesario obtener promedios por parcela de densidades de individuos vivos
+# para calcular la necromasa de los arboles muesrtos en pie
+#
+################################################################################
+
 
 user = ''
 password = ''
