@@ -171,7 +171,6 @@ for pari in par.itertuples():
 
 	meds = pd.read_sql_query(sql=query, con = conn)
 
-
 	# densidad de madera promedio en la parcela
 	avewd = 0.0
 	avecount = 0
@@ -193,6 +192,7 @@ for pari in par.itertuples():
 			if pd.notna(tax.loc[tax.TaxonID == tree.Taxon, 'Densidad'].item()):
 				avewd += tax.loc[tax.TaxonID == tree.Taxon, 'Densidad'].item()
 				avecount += 1
+				
 		elif len(tax.loc[tax.TaxonID == tree.Taxon, 'Densidad']) > 1:
 			print "\t{0} has {1} densities in tax table.".format(tree.Taxon,
 					len(tax.loc[tax.TaxonID == tree.Taxon, 'Densidad']))
