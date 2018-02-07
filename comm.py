@@ -104,10 +104,49 @@ class Plot(object):
 		genera -> epithets.
 		
 		"""
-		
+		taxids = []
 		if taxa2del is None:
 			taxa2del = {x:None for x in [u'Aizoaceae', u'Alstroemeriaceae', u'Araceae', u'Aristolochiaceae', u'Athyriaceae', u'Blechnaceae', u'Campanulaceae', u'Commelinaceae', u'Cucurbitaceae', u'Cyatheaceae', u'Cyclanthaceae', u'Cyperaceae', u'Dennstaedtiaceae', u'Dicksoniaceae', u'Dryopteridaceae', u'Francoaceae', u'Gesneriaceae', u'Gunneraceae', u'Heliconiaceae', u'Lomariopsidaceae', u'Marantaceae', u'Marcgraviaceae', u'Musaceae', u'Orchidaceae', u'Poaceae', u'Pteridaceae', u'Smilacaceae', u'Strelitziaceae', u'Woodsiaceae', u'Zingiberaceae']}
+		
+		for fam in taxa2del:
 			
+			if taxa2del[fam] is None:
+				taxids += self.taxa[(self.taxa.Family == fam)].index.tolist()
+	
+			else:
+				for gen in taxa2del[fam]:
+					
+					if gen is None:
+					
+						taxids += self.taxa[(self.taxa.Family == fam) & self.taxa.Genus.isna()].index.tolist()
+						
+					else:
+					
+						if taxa2del[fam][gen] is None:
+						
+							taxids += self.taxa[(self.taxa.Family == fam) & (self.taxa.Genus == gen)].index.tolist()
+							
+						else:
+							
+							for epi in taxa2del[fam][gen]:
+								
+								if epi is None:
+									
+									taxids += self.taxa[(self.taxa.Family == fam) & (self.taxa.Genus == gen) & self.taxa.Epithet.isna()].index.tolist()
+									
+								else:
+									
+									taxids += self.taxa[(self.taxa.Family == fam) & (self.taxa.Genus == gen) & (self.taxa.Epithet == epi)].index.tolist()
+		
+		stemsids = self.stems[self.stems.TaxonID.isin(taxids)].index.tolist()
+		self.stems.drop(index = stemsids, inplace = True)
+		self.stems.reset_index(drop = True, inplace = True)
+		
+		self.taxa.drop(index = taxids, inplace = True)
+		self.taxa.reset_index(drop = True, inplace = True)
+		
+		return None
+		
 	
 	def set_holdridge(self, elevation_raster = None, precipitation_raster = None):
 		"""
@@ -156,7 +195,7 @@ class Plot(object):
 		def density_updated(row):
 			return wd.get_density(row.Family, row.Genus, row.Epithet, dens)
 
-		self.taxa['Densidad'] = self.taxa.apply(density_updated, axis = 1)
+		self.taxa['Density'] = self.taxa.apply(density_updated, axis = 1)
 		
 		return None
 
@@ -167,6 +206,14 @@ class Plot(object):
 		self.taxa['Density'] = self.taxa.merge(densities_df, on = ['Family','Genus','Epithet'], how = 'left')['Density']
 		return None
 		
+	
+	def det_stems(self):
+		"""
+		Number of stems identified to a taxa with available or inferred density.
+		"""
+		tax = self.taxa[self.taxa.Density.notna()]['TaxonID'].tolist()
+		num = self.stems[self.stems.TaxonID.isin(tax)].shape[0]
+		return num
 	
 	def biomass(self, method = 'deterministic'):
 		"""
