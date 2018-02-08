@@ -196,6 +196,7 @@ for pari in par.itertuples():
 		elif len(tax.loc[tax.TaxonID == tree.Taxon, 'Densidad']) > 1:
 			print "\t{0} has {1} densities in tax table.".format(tree.Taxon,
 					len(tax.loc[tax.TaxonID == tree.Taxon, 'Densidad']))
+
 	if avecount > 0:
 		avewd /= avecount
 

@@ -49,6 +49,7 @@ class Plot(object):
 			
 		elif isinstance(dataframe, pd.DataFrame):
 			
+			self.name = None # Plot identifier (e.g., index)
 			self.coordinates = None
 			
 			self.holdridge = None
@@ -59,7 +60,8 @@ class Plot(object):
 			self.precipitation = None
 			
 			self.size_def = None
-			self.size_area = None
+			self.size_area = None # Effective sampled area per diametric class
+			self.area = None # Total area
 			
 			self.alvarez = 0.0 # Tons / ha
 			self.chave_i = 0.0 # Tons / ha
@@ -185,9 +187,40 @@ class Plot(object):
 			raise ValueError("A raster file with E values is required.")
 			
 		return None
+		
+		
+	def miss_densi(self):
+		"""
+		Fill wood density missing entries with the average (by stem frequency) 
+		wood density in the plot.
+		"""
+		avewd = 0.0
+		avecount = 0
+		
+		for tree in self.stems.itertuples():
+			
+			thisdens = self.taxa.loc[self.taxa.TaxonID == tree.TaxonID, 'Density'].item()
+			if pd.notna(thisdens):
+				avewd += thisdens
+				avecount += 1
+
+		if avecount > 0:
+			avewd /= avecount
+
+		if avewd == 0:
+			raise ValueError("Plot average density is zero")
+			
+		self.taxa.loc[self.taxa.Density.isna(), 'Density'] = avewd
+			
+		return None
+		
 
 	def densities_from_file(self, densities_file):
-		
+		"""
+		Retrieve wood density from a csv table. If especies or genus is not 
+		included in the table, the average of the genus or famly is assigned,
+		respectively.  
+		"""
 		self.taxa['Density'] = np.nan
 		
 		dens = wd.load_data(densities_file)
@@ -197,13 +230,21 @@ class Plot(object):
 
 		self.taxa['Density'] = self.taxa.apply(density_updated, axis = 1)
 		
+		self.miss_densi()
+		
 		return None
 
 
 	def densities_from_dataframe(self, densities_df):
-		"""TO TEST"""
+		"""
+		TO TEST
+		Retrieve wood density from a csv table. If especies or genus is not 
+		included in the table, the average of the genus or famly is assigned,
+		respectively.  
+		"""
 		self.taxa['Density'] = np.nan
 		self.taxa['Density'] = self.taxa.merge(densities_df, on = ['Family','Genus','Epithet'], how = 'left')['Density']
+		self.miss_densi()
 		return None
 		
 	
@@ -214,6 +255,7 @@ class Plot(object):
 		tax = self.taxa[self.taxa.Density.notna()]['TaxonID'].tolist()
 		num = self.stems[self.stems.TaxonID.isin(tax)].shape[0]
 		return num
+
 	
 	def biomass(self, method = 'deterministic'):
 		"""
@@ -226,16 +268,41 @@ class Plot(object):
 		following the proposal by Chave et al.), and `bayes` (full bayesian 
 		estimate proposed by IDEAM-SMByC).
 		"""
+		if self.det_stems() <= 0:
+			raise ValueError("No stems have density values available.")
+			
 		if method == 'deterministic':
 			self.alvarez = 0.0 # Tons / ha
 			self.chave_i = 0.0 # Tons / ha
 			self.chave_ii = 0.0 # Tons / ha
 
-			# estimate average wood density in the plot
-			avewd = 0.0
-			avecount = 0
-			
-		
+			for tree in self.stems.itertuples():
+				
+				# Move this check to __init__
+				if tree.Diameter <= 0:
+					if 'StemID' in self.stems.columns:
+						print "Stem {0} (StemID) has illegal diameter.".format(tree.StemID)
+					else:
+						print "Stem {0} (row in self.stems) has illegal diameter.".format(tree.name)
+						
+				dens = self.taxa.loc[self.taxa.TaxonID == tree.TaxonID, 'Density'].item()
+
+				area = 0
+				if self.size_area:
+					area = self.size_area[tree.Size]
+				elif self.area:
+					area = self.area
+				else:
+					raise ValueError("Plot area has not been set.")
+					
+				try:
+					this_alvarez += allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
+					this_chaveII += allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
+					this_chaveI += allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
+				
+				except:
+					print "Plot: {0}, StemID: {1}, TaxonID: {2}, Diameter: {3}, Density: {4}, E: {5}".format(self.name, tree.StemID, tree.TaxonID, tree.Diametro, dens, self.E)
+
 		return None
 		
 		
