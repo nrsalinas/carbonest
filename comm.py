@@ -173,8 +173,11 @@ class Plot(object):
 		if not self.precipitation and self.coordinates:
 			self.chave_forest = allometry.precipitation(self.coordinates[0], self.coordinates[1], precipitation_raster)
 		
-		else:
+		if not self.precipitation:
 			raise ValueError("You need precipitation values to estimate Chave forest type, or the geographic coordinates of the locality.")
+		
+		else:
+			self.chave_forest = allometry.chaveI_forest(self.precipitation)
 			
 		return None
 		
@@ -280,13 +283,14 @@ class Plot(object):
 				
 				# Move this check to __init__
 				if tree.Diameter <= 0:
-					if 'StemID' in self.stems.columns:
+					if u'StemID' in self.stems.columns:
 						print "Stem {0} (StemID) has illegal diameter.".format(tree.StemID)
 					else:
 						print "Stem {0} (row in self.stems) has illegal diameter.".format(tree.name)
 						
 				dens = self.taxa.loc[self.taxa.TaxonID == tree.TaxonID, 'Density'].item()
-
+				
+				#na = self.name
 				area = 0
 				if self.size_area:
 					area = self.size_area[tree.Size]
@@ -296,12 +300,15 @@ class Plot(object):
 					raise ValueError("Plot area has not been set.")
 					
 				try:
-					this_alvarez += allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
-					this_chaveII += allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
-					this_chaveI += allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
-				
+					self.alvarez += allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
+					self.chave_ii += allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
+					self.chave_i += allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
+			
 				except:
-					print "Plot: {0}, StemID: {1}, TaxonID: {2}, Diameter: {3}, Density: {4}, E: {5}".format(self.name, tree.StemID, tree.TaxonID, tree.Diametro, dens, self.E)
+					if u'StemID' in self.stems.columns:
+						print "Plot: {0}, StemID: {1}, TaxonID: {2}, Diameter: {3}, Density: {4}, E: {5}".format(self.name, tree.StemID, tree.TaxonID, tree.Diameter, dens, self.E)
+					else:
+						print "Plot: {0}, Stems row: {1}, TaxonID: {2}, Diameter: {3}, Density: {4}, E: {5}".format(self.name, tree.Index, tree.TaxonID, tree.Diameter, dens, self.E)
 
 		return None
 		
