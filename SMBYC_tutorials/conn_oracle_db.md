@@ -31,8 +31,8 @@ ln -s libclntsh.so.12.1 libclntsh.so
 2. Creación de las variables del sistema:
 
 ```
-export ORACLE\_HOME=/usr/lib/oracle/12.2/client64/lib
-export LD\LIBRARY\PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
+export ORACLE_HOME=/usr/lib/oracle/12.2/client64/lib
+export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
 ```
 
 3. Configuración del dynamic linker: `sudo ldconfig`
