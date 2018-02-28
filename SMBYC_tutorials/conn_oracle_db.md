@@ -45,9 +45,10 @@ Los datos del punto dos pueden guardarse en el perfil del usuario (`.bashrc`) pa
 1. Generación del SID extendido:
 ```python
 import cx_Oracle
+import sqlalchemy as al
 ext_sid = cx_Oracle.makedsn(<host>, <port>, <sid>)
 eng = al.create_engine("oracle+cx_oracle://username:password@{0}".format(ext_sid))
-conn = conntect()
+conn = eng.connect()
 dtfr = pd.read_sql_table(con=conn, table_name=<nombre_de_la_tabla>) 
 ```
 
