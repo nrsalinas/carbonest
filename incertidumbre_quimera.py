@@ -1,8 +1,8 @@
 ################################################################################
 #
 # Parcelas con errores:
-# 464, 465, 466, 467, 468, 868, 1074, 1075, 1076, 1077, 1078, 1079, 1080, 1081, 
-# 1082, 1083, 1084, 1085, 1086, 1087, 1088, 1089, 1090, 1091, 1092, 1093, 4669, 
+# 464, 465, 466, 467, 468, 868, 1074, 1075, 1076, 1077, 1078, 1079, 1080, 1081,
+# 1082, 1083, 1084, 1085, 1086, 1087, 1088, 1089, 1090, 1091, 1092, 1093, 4669,
 # 4673, 4933, 4936
 #
 ################################################################################
@@ -24,7 +24,7 @@ iters = 100
 # Iteraciones para la simulacion de biomasa por parcela
 path_sims = 1000
 
-# Contenedores de distribuciones finales: 
+# Contenedores de distribuciones finales:
 biomass_distr = np.empty((0, path_sims)) # incertidumbre agregada
 diam_distr = np.empty((0, path_sims)) # incertidumbre debida al diametro
 wd_distr = np.empty((0, path_sims)) # incertidumbre debida a la densidad
@@ -33,11 +33,11 @@ allo_distr = np.empty((0, path_sims)) # incertidumbre debida a la ecuacion alome
 # Nucleo del nombre de los archivos de salida
 outfile_root = "test_20180227"
 
-# Cargar muestreo probabilidad posterior de los coefficientes de la ecuacion 
+# Cargar muestreo probabilidad posterior de los coefficientes de la ecuacion
 # de Chave et al. (2014).
 trace = pickle.load(open("trace_20180224.pkl", "r"))
 
-# Obtencion de un muestreo aleatorio de la distribucion posterior de los 
+# Obtencion de un muestreo aleatorio de la distribucion posterior de los
 # coefficientes alometricos.
 myas = np.random.choice(trace.get_values('a', burn = 1000, combine=True), iters)
 myas = np.append(myas, myas.mean())
@@ -79,12 +79,12 @@ engine = al.create_engine(
 conn = engine.connect()
 
 
-# Tabla de equivalencia taxonomica. Contiene dos columnas: ID del taxon y ID del taxon acceptado. 
+# Tabla de equivalencia taxonomica. Contiene dos columnas: ID del taxon y ID del taxon acceptado.
 accnames = db_utils.acctax(conn)
 
 
 # Area e indice de parcelas
-pars = pd.read_sql_query('SELECT PlotID, Area FROM Parcelas', conn) 
+pars = pd.read_sql_query('SELECT PlotID, Area FROM Parcelas', conn)
 
 t0 = time.time()
 for parcela in pars.itertuples():
@@ -92,19 +92,22 @@ for parcela in pars.itertuples():
 
 	# Tabla simple con todos los datos de una parcela: datos dasometricos, nombres de las especies y densidades.
 	table = db_utils.dasotab('Quimera', conn, parcela.PlotID, accepted_taxa = accnames)
-	
+
 	try:
-	
+
 		# Creaion de objeto comm.Plot para la manipulacion de datos.
 		myplot = comm.Plot(dataframe=table)
 		myplot.name = 1
+		fam, gen, spp = myplot.floristic_summary()
+		if fam == 0: # Todos los individuos de las parcela estan indeterminados
+			continue
 		myplot.purify()
 		myplot.coordinates = db_utils.coords('Quimera', conn, parcela.PlotID)
 		myplot.set_holdridge(elevation_raster, precipitation_raster)
 		myplot.set_chave_forest(precipitation_raster)
 		myplot.set_E(chave_E_raster)
 		myplot.densities_from_file(densities_file)
-		
+
 		# Arrays multidimensionales de los datos simuladops. Cada fila contiene
 		# los datos simulados para cada arbol
 		AGB = []
@@ -119,7 +122,7 @@ for parcela in pars.itertuples():
 				diamUnc.append([])
 				wdUnc.append([])
 				alloUnc.append([])
-				
+
 				# Incertidumbre del diametro
 				sdd = tree.Diameter / 20.0
 				diams = np.random.normal(tree.Diameter, sdd, iters)
@@ -132,11 +135,11 @@ for parcela in pars.itertuples():
 				wds = np.append(wds, wd)
 
 				# Incertidumbre total
-				for sdi, swd, sa, sb, sc, sd, se in zip(diams[:-1], wds[:-1], myas[:-1], mybs[:-1], 
+				for sdi, swd, sa, sb, sc, sd, se in zip(diams[:-1], wds[:-1], myas[:-1], mybs[:-1],
 														mycs[:-1], myds[:-1], myes[:-1]):
 					agb = sa + sb * myplot.E + sc * np.log(swd) + sd * np.log(sdi) + se * np.log(sdi)**2
 					AGB[-1].append(agb)
-				
+
 				# Incertidumbre debida a los errores de diametro
 				for sdi in diams[:-1]:
 					agb = myas[-1] + mybs[-1] * myplot.E + mycs[-1] * np.log(wds[-1]) + myds[-1] * \
@@ -155,13 +158,13 @@ for parcela in pars.itertuples():
 						np.log(diams[-1])**2
 					alloUnc[-1].append(agb)
 
-					
+
 			AGB = np.array(AGB)
 			diamUnc = np.array(diamUnc)
 			wdUnc = np.array(wdUnc)
 			alloUnc = np.array(alloUnc)
 
-			# Muestreo combinatorio para obtener la biomasa de la parcela   
+			# Muestreo combinatorio para obtener la biomasa de la parcela
 			total_agb = np.empty((0, path_sims))
 			for t in xrange(AGB.shape[0]):
 				sample = np.random.choice(AGB[t], path_sims)
@@ -182,7 +185,7 @@ for parcela in pars.itertuples():
 			total_diam_unc = np.divide(total_diam_unc, parcela.Area)
 			total_diam_unc = total_diam_unc.reshape(1,path_sims)
 			diam_distr = np.append(diam_distr, total_diam_unc, axis=0)
-				
+
 
 			total_wood_unc = np.empty((0, path_sims))
 			for t in xrange(AGB.shape[0]):
@@ -193,7 +196,7 @@ for parcela in pars.itertuples():
 			total_wood_unc = np.divide(total_wood_unc, parcela.Area)
 			total_wood_unc = total_wood_unc.reshape(1,path_sims)
 			wd_distr = np.append(wd_distr, total_wood_unc, axis=0)
-				
+
 
 			total_allo_unc = np.empty((0, path_sims))
 			for t in xrange(AGB.shape[0]):
@@ -207,7 +210,7 @@ for parcela in pars.itertuples():
 
 	except:
 		print "Error al procesar parcela", parcela.PlotID
-		
+
 conn.close()
 
 np.save( "{0}_biomass".format(outfile_root) , biomass_distr)
