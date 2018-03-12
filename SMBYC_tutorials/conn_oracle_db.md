@@ -35,7 +35,11 @@ export ORACLE_HOME=/usr/lib/oracle/12.2/client64/lib
 export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
 ```
 
-3. Configuración del dynamic linker: `sudo ldconfig`
+3. Configuración del dynamic linker:
+
+```
+sudo ldconfig
+```
 
 Los datos del punto dos pueden guardarse en el perfil del usuario (`.bashrc`) para realizarlo una sola vez.
 
@@ -43,6 +47,7 @@ Los datos del punto dos pueden guardarse en el perfil del usuario (`.bashrc`) pa
 ## Connección en Python
 
 1. Generación del SID extendido:
+
 ```python
 import cx_Oracle
 import sqlalchemy as al
@@ -51,4 +56,3 @@ eng = al.create_engine("oracle+cx_oracle://username:password@{0}".format(ext_sid
 conn = eng.connect()
 dtfr = pd.read_sql_table(con=conn, table_name=<nombre_de_la_tabla>) 
 ```
-
