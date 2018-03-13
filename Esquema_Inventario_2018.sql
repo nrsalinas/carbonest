@@ -191,11 +191,12 @@ CREATE TABLE Determinaciones (
 DROP TABLE IF EXISTS Conglomerados;
 CREATE TABLE Conglomerados (
 	PlotID INT NOT NULL UNIQUE,
+	Brigada ENUM('Estandar', 'Calidad') DEFAULT 'Estandar',
 	Departamento VARCHAR(50),
 	Region ENUM('Amazonia', 'Andes', 'Pacifico', 'Orinoquia', 'Caribe') NOT NULL,
 	Fecha YEAR, # Año toma de  datos
 	Socio VARCHAR(255),
-	SFPC TINYINT NOT NULL, # Subparcelas donde se tomó la medición de Carbono ?????
+	SFPC TINYINT NOT NULL, 
 	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (PlotID)
 	)
