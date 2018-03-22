@@ -129,7 +129,7 @@ CREATE TABLE Tallos (
 	Campos especificos para Arboles Muertos en Pie */
 	Condicion ENUM('MP', 'TO', 'VP', 'MC', 'M') DEFAULT NULL,
 	POM FLOAT DEFAULT NULL,
-	DANO ENUM('Q', 'DB', 'SD', 'DM', 'IRR', 'EB') DEFAULT NULL, # solo AMP
+	Dano ENUM('Q', 'DB', 'SD', 'DM', 'IRR', 'EB') DEFAULT NULL, # solo AMP
 	PetrProf FLOAT DEFAULT NULL, # Profundidad en cm alcanzada por el penetrometro, solo AMP
 	PetrGolpes INT DEFAULT NULL, # Golpes ejercidos con el penetrometro, solo AMP
 
@@ -150,6 +150,7 @@ CREATE TABLE Individuos (
 	Azimut FLOAT DEFAULT NULL,
 	Distancia FLOAT DEFAULT NULL,
 	Dets INT DEFAULT NULL, # Historia de determinaciones, referencia a Determinaciones.DetID. Deben ser valores unicos por individuos vivos, NULL si es individuo muerto.
+	Brigada ENUM('Estandar', 'Calidad') DEFAULT 'Estandar',
 	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (IndividuoID)
 	)
@@ -191,12 +192,11 @@ CREATE TABLE Determinaciones (
 DROP TABLE IF EXISTS Conglomerados;
 CREATE TABLE Conglomerados (
 	PlotID INT NOT NULL UNIQUE,
-	Brigada ENUM('Estandar', 'Calidad') DEFAULT 'Estandar',
 	Departamento VARCHAR(50),
 	Region ENUM('Amazonia', 'Andes', 'Pacifico', 'Orinoquia', 'Caribe') NOT NULL,
 	Fecha YEAR, # Año toma de  datos
 	Socio VARCHAR(255),
-	SFPC TINYINT NOT NULL, 
+	SFPC TINYINT NOT NULL,
 	Fecha_mod TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (PlotID)
 	)
