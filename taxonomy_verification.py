@@ -1,3 +1,7 @@
+#
+# Nombres validos son sinomimos de si mismos
+#
+
 import pandas as pd
 import sqlalchemy as al
 import re
@@ -7,12 +11,12 @@ import codecs
 min_score = 0.95
 user = u"root"
 password = u"Soledad1"
-database = u"Quimera" # u'Quimera' or u'Taxon'
+database = u'IFN_2018' # u'Quimera' | u'IFN' | u'IFN_2018'
 names_included = []
 ids_included = []
 TNRS_ID = None
 bffrlog = ""
-logfile = "Quimera_tax_ver_20180110.txt"
+logfile = "IFN_2018_tax_ver_20180327.txt"
 
 def escape_quote(autor):
 	out = None
@@ -21,7 +25,7 @@ def escape_quote(autor):
 	return out
 
 engine = al.create_engine(
-	'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1'.format(
+	'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(
 	user, password, database), encoding='utf-8')
 
 conn = engine.connect()
@@ -37,21 +41,23 @@ else:
 
 tax = pd.read_sql_table(table_name='Taxonomia',con=conn, index_col='TaxonID')
 
-tax_orphan = tax[tax.SinonimoDe.isna()]
+tax_orphan = tax[tax.SinonimoDe.isna()].sort_values([u'Familia', u'Genero',u'Epiteto'])
 
 names = u""
 
 
 for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 	# Nombres sin Genero no son revisados
+	print row.Genero, row.Epiteto
 	name = None
 	gen, epi = u'', u''
 	if type(row.Genero) == unicode:
 		gen = re.sub(r'\s+', u'', row.Genero)
 		if type(row.Epiteto) == unicode:
 			epi = re.sub(r'\s+', u'', row.Epiteto)
-
-		name = gen + u" " + epi
+			name = gen + u' ' + epi
+		else:
+			name = gen
 
 	if name:
 		try:
@@ -100,7 +106,7 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 				# Update record
 				already_in_db = False
 				dad = int()
-				if revised[1].epithet is None:
+				if pd.isna(revised[1].epithet):
 					if len(tax[(tax.Genero == revised[1].genus) & tax.Epiteto.isna()]):
 						dad = int(tax[(tax.Genero == revised[1].genus) & tax.Epiteto.isna()].index[0])
 						already_in_db = True
@@ -112,7 +118,7 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 
 				if already_in_db:
 					# Name included in db before the execution of current updating routine
-					if epi is None:
+					if pd.isna(epi) or epi == u'':
 						mytax = int(tax[(tax.Genero == gen) & tax.Epiteto.isna()].index[0])
 
 					else:
@@ -142,11 +148,11 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 					names_included.append(revised[1])
 					mytax = int()
 					if revised[1].epithet is None: # Got only a genus name
-						query = u"INSERT INTO Taxonomia (Familia, Genero, AutorGenero, Fuente) " + \
+						query = u"INSERT INTO Taxonomia (Familia, Genero, Autor, Fuente) " + \
 									u"VALUES ('{0}', '{1}', '{2}', {3})".format(revised[1].family,
 									revised[1].genus, escape_quote(revised[1].author), TNRS_ID)
 					else:
-						query = u"INSERT INTO Taxonomia (Familia, Genero, Epiteto, AutorEpiteto, Fuente) " + \
+						query = u"INSERT INTO Taxonomia (Familia, Genero, Epiteto, Autor, Fuente) " + \
 							   u"VALUES ('{0}', '{1}', '{2}', '{3}', {4})".format(revised[1].family,
 								revised[1].genus, revised[1].epithet, escape_quote(revised[1].author), TNRS_ID)
 
@@ -164,7 +170,7 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 					ex = conn.execute(query)
 
 		except:
-			print "Error with name",name
+			bffrlog += ">>> Problema con nombre {0} <<<\n".format(name)
 			continue
 
 	if len(bffrlog) > 5000:

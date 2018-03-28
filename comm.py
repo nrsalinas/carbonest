@@ -294,10 +294,7 @@ class Plot(object):
 
 		Arguments:
 
-		- method (string): Method to be employed in calculations. Options are
-		`deterministic` (traditional method), `montecarlo` (simulate uncertainty
-		following the proposal by Chave et al.), and `bayes` (full bayesian
-		estimate proposed by IDEAM-SMByC).
+		- method (string): Method to be employed in calculations.
 		"""
 		if self.det_stems() <= 0:
 			raise ValueError("No stems have density values available.")
