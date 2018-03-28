@@ -288,7 +288,7 @@ class Plot(object):
 		return num
 
 
-	def biomass(self, method = 'deterministic'):
+	def biomass(self, method = 'deterministic', equations = ['Chave_II']):
 		"""
 		Estimates biomass (ton/ha) from plant community data.
 
@@ -325,9 +325,12 @@ class Plot(object):
 					raise ValueError("Plot area has not been set.")
 
 				try:
-					self.alvarez += allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
-					self.chave_ii += allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
-					self.chave_i += allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
+					if 'Alvarez' in equations:
+						self.alvarez += allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
+					if 'Chave_II' in equations:
+						self.chave_ii += allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
+					if 'Chave_I' in equations:
+						self.chave_i += allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
 
 				except:
 					if u'StemID' in self.stems.columns:
