@@ -9,8 +9,9 @@ from credentials import mysql_db
 
 buffout = 'PlotID,Alvarez,Chave_I,Chave_II,Longitud,Latitud\n'
 
-engine = al.create_engine(
-	'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
+#engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
+
+engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
 	
 conn = engine.connect()
 
@@ -32,7 +33,7 @@ taxacc = db_utils.acctax(conn)
 
 #plots = pd.read_sql_table('Coordenadas', conn)
 
-query = query = "SELECT DiametroP AS Diameter, Tamano AS Size, AlturaTotal AS Height, Individuos.Plot as Plot, Subparcela AS Subplot, Taxon, Latitud, Longitud from Tallos LEFT JOIN Individuos ON IndividuoID = Individuo LEFT JOIN Coordenadas ON Coordenadas.Plot = Individuos.Plot LEFT JOIN Determinaciones ON Dets = DetID WHERE Tamano IN ('L', 'F', 'FG') AND Dets NOT NULL"
+query = query = "SELECT DiametroP AS Diameter, Tamano AS Size, AlturaTotal AS Height, Individuos.Plot as Plot, Subparcela AS Subplot, Taxon, Latitud, Longitud from Tallos LEFT JOIN Individuos ON IndividuoID = Individuo LEFT JOIN Coordenadas ON Coordenadas.Plot = Individuos.Plot LEFT JOIN Determinaciones ON Dets = DetID WHERE Tamano IN ('L', 'F', 'FG') AND Dets IS NOT NULL"
 
 trees = pd.read_sql_query(query, conn)
 
