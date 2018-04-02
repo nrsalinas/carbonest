@@ -6,28 +6,28 @@ import db_utils
 from credentials import mysql_db
 
 # Contenedor de resultados
-outfile = 'biomass_IFN_2018_20180330.csv'
-outfile = 'biomass_IFN_2017_20180401.csv'
+outfile = 'biomass_IFN_2018_20180402.csv'
+#outfile = 'biomass_IFN_2017_20180402.csv'
 buffout = 'PlotID,Alvarez,Chave_I,Chave_II,Longitud,Latitud\n'
 
-engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN'))
+engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
 
 #engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
 
 conn = engine.connect()
 
 # Archivos (o carpetas) necesarios para los computos
-densities_file = '/home/nelson/Documents/IDEAM/wood_density_db/ChaveDB/gwddb_20180113.csv'
-#densities_file = '/home/nelsonsalinas/Documents/wood_density_db/ChaveDB/gwddb_20180113.csv'
+#densities_file = '/home/nelson/Documents/IDEAM/wood_density_db/ChaveDB/gwddb_20180113.csv'
+densities_file = '/home/nelsonsalinas/Documents/wood_density_db/ChaveDB/gwddb_20180113.csv'
 
-elevation_raster = '/home/nelson/Documents/IDEAM/cust_layers/alt/alt.tif'
-#elevation_raster = '/home/nelsonsalinas/Documents/cust_layers/alt/alt.tif'
+#elevation_raster = '/home/nelson/Documents/IDEAM/cust_layers/alt/alt.tif'
+elevation_raster = '/home/nelsonsalinas/Documents/cust_layers/alt/alt.tif'
 
-precipitation_raster = '/home/nelson/Documents/IDEAM/cust_layers/precp/precp.tif'
-#precipitation_raster = '/home/nelsonsalinas/Documents/cust_layers/precp/precp.tif'
+#precipitation_raster = '/home/nelson/Documents/IDEAM/cust_layers/precp/precp.tif'
+precipitation_raster = '/home/nelsonsalinas/Documents/cust_layers/precp/precp.tif'
 
-chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_cartography/E.tif'
-#chave_E_raster = '/home/nelsonsalinas/Documents/Chave_cartography/E.tif'
+#chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_cartography/E.tif'
+chave_E_raster = '/home/nelsonsalinas/Documents/Chave_cartography/E.tif'
 
 # Clases de bosque son cambiado a una categoria cercana usada por Alvarez que produzca menor biomasa
 forest_change = {'holdridge' : {'premontane_wet': 'lower_montane_wet',
@@ -39,7 +39,7 @@ taxacc = db_utils.acctax(conn)
 
 #plots = pd.read_sql_table('Coordenadas', conn)
 
-query = query = "SELECT DiametroP AS Diameter, Tamano AS Size, AlturaTotal AS Height, Individuos.Plot as Plot, Subparcela AS Subplot, Taxon, Latitud, Longitud from Tallos LEFT JOIN Individuos ON IndividuoID = Individuo LEFT JOIN Coordenadas ON Coordenadas.Plot = Individuos.Plot LEFT JOIN Determinaciones ON Dets = DetID WHERE Tamano IN ('L', 'F', 'FG') AND Dets IS NOT NULL AND DiametroP IS NOT NULL"
+query = "SELECT DiametroP AS Diameter, Tamano AS Size, AlturaTotal AS Height, Individuos.Plot as Plot, Subparcela AS Subplot, Taxon, Latitud, Longitud from Tallos LEFT JOIN Individuos ON IndividuoID = Individuo LEFT JOIN Coordenadas ON Coordenadas.Plot = Individuos.Plot LEFT JOIN Determinaciones ON Dets = DetID WHERE Tamano IN ('L', 'F', 'FG') AND Dets IS NOT NULL AND PetrProf IS NULL AND PetrGolpes IS NULL"
 
 trees = pd.read_sql_query(query, conn)
 
@@ -69,7 +69,7 @@ for plotid in trees.Plot.unique(): #[158621]:
 		myplot.name = plotid
 		fam, gen, spp = myplot.floristic_summary()
 		if fam == 0: # Todos los individuos de las parcela estan indeterminados
-		#	print "Parcela {0} no fue analizada: No contiene ningun individuo determinado.".format(plotid)
+			#print "Parcela {0} no fue analizada: No contiene ningun individuo determinado.".format(plotid)
 			continue
 		#print myplot.name
 		myplot.purify()
