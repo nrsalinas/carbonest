@@ -67,7 +67,6 @@ class Plot(object):
 			self.chave_i = 0.0 # Tons / ha
 			self.chave_ii = 0.0 # Tons / ha
 
-
 			# optional fields
 			fields = ['Diameter','Height','TaxonID']
 			if 'Subplot' in dataframe.columns:
