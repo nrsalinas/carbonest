@@ -62,6 +62,8 @@ class Plot(object):
 			self.size_def = None
 			self.size_area = None # Effective sampled area per diametric class
 			self.area = None # Total area
+			
+			self.basal_area = None
 
 			self.alvarez = 0.0 # Tons / ha
 			self.chave_i = 0.0 # Tons / ha
@@ -338,3 +340,23 @@ class Plot(object):
 						print "Plot: {0}, Stems row: {1}, TaxonID: {2}, Diameter: {3}, Density: {4}, E: {5}".format(self.name, tree.Index, tree.TaxonID, tree.Diameter, dens, self.E)
 
 		return None
+
+
+	def basal_area(self):
+
+		self.basal_area = 0.0
+
+		for tree in self.stems.itertuples():
+
+			area = 0
+			if self.size_area:
+				area = self.size_area[tree.Size]
+			elif self.area:
+				area = self.area
+			else:
+				raise ValueError("Plot area has not been set.")
+
+			self.basal_area += (((tree.Diameter / 2.0) ** 2) * np.pi) / area
+
+		return None
+			
