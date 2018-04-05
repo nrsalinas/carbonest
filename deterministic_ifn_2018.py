@@ -6,9 +6,9 @@ import db_utils
 from credentials import mysql_db
 
 # Contenedor de resultados
-outfile = 'biomass_IFN_2018_20180402.csv'
+outfile = 'biomass_IFN_2018_20180405.csv'
 #outfile = 'biomass_IFN_2017_20180402.csv'
-buffout = 'PlotID,Alvarez,Chave_I,Chave_II,Longitud,Latitud\n'
+buffout = 'PlotID,Area_basal,Alvarez,Chave_I,Chave_II,Longitud,Latitud\n'
 
 engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
 
@@ -17,17 +17,17 @@ engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&u
 conn = engine.connect()
 
 # Archivos (o carpetas) necesarios para los computos
-#densities_file = '/home/nelson/Documents/IDEAM/wood_density_db/ChaveDB/gwddb_20180113.csv'
-densities_file = '/home/nelsonsalinas/Documents/wood_density_db/ChaveDB/gwddb_20180113.csv'
+densities_file = '/home/nelson/Documents/IDEAM/wood_density_db/ChaveDB/gwddb_20180113.csv'
+#densities_file = '/home/nelsonsalinas/Documents/wood_density_db/ChaveDB/gwddb_20180113.csv'
 
-#elevation_raster = '/home/nelson/Documents/IDEAM/cust_layers/alt/alt.tif'
-elevation_raster = '/home/nelsonsalinas/Documents/cust_layers/alt/alt.tif'
+elevation_raster = '/home/nelson/Documents/IDEAM/cust_layers/alt/alt.tif'
+#elevation_raster = '/home/nelsonsalinas/Documents/cust_layers/alt/alt.tif'
 
-#precipitation_raster = '/home/nelson/Documents/IDEAM/cust_layers/precp/precp.tif'
-precipitation_raster = '/home/nelsonsalinas/Documents/cust_layers/precp/precp.tif'
+precipitation_raster = '/home/nelson/Documents/IDEAM/cust_layers/precp/precp.tif'
+#precipitation_raster = '/home/nelsonsalinas/Documents/cust_layers/precp/precp.tif'
 
-#chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_cartography/E.tif'
-chave_E_raster = '/home/nelsonsalinas/Documents/Chave_cartography/E.tif'
+chave_E_raster = '/home/nelson/Documents/IDEAM/Chave_cartography/E.tif'
+#chave_E_raster = '/home/nelsonsalinas/Documents/Chave_cartography/E.tif'
 
 # Clases de bosque son cambiado a una categoria cercana usada por Alvarez que produzca menor biomasa
 forest_change = {'holdridge' : {'premontane_wet': 'lower_montane_wet',
@@ -86,9 +86,10 @@ for plotid in trees.Plot.unique(): #[158621]:
 		myplot.densities_from_file(densities_file)
 
 		myplot.biomass(equations = ['Chave_II', 'Chave_I', 'Alvarez'])
+		myplot.estimate_basal_area()
 		#print myplot.chave_i
 		#print '\n'
-		buffout += "{0},{1},{2},{3},{4},{5}\n".format(myplot.name, myplot.alvarez, myplot.chave_i, myplot.chave_ii, myplot.coordinates[0], myplot.coordinates[1])
+		buffout += "{0},{1},{2},{3},{4},{5},{6}\n".format(myplot.name, myplot.basal_area, myplot.alvarez, myplot.chave_i, myplot.chave_ii, myplot.coordinates[0], myplot.coordinates[1])
 
 with open(outfile, 'w') as fhandle:
 	fhandle.write(buffout)

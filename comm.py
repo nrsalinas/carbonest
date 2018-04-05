@@ -51,6 +51,7 @@ class Plot(object):
 
 			self.name = None # Plot identifier (e.g., index)
 			self.coordinates = None
+			self.coordinates_sps = {}
 
 			self.holdridge = None
 			self.chave_forest = None
@@ -64,17 +65,29 @@ class Plot(object):
 			self.area = None # Total area
 			
 			self.basal_area = None
+			self.basal_area_sps = {}
 
 			self.alvarez = 0.0 # Tons / ha
+			self.alvarez_sps = {}
 			self.chave_i = 0.0 # Tons / ha
+			self.chave_i_sps = {}
 			self.chave_ii = 0.0 # Tons / ha
+			self.chave_ii_sps = {}
 
 			# optional fields
 			fields = ['Diameter','Height','TaxonID']
+
 			if 'Subplot' in dataframe.columns:
 				fields.append('Subplot')
+				self.basal_area_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				self.alvarez_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				self.chave_i_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				self.chave_ii_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				self.coordinates_sps = {c: (None, None) for c in dataframe.Subplot.unique()}
+				
 			if 'StemID' in dataframe.columns:
 				fields.append('StemID')
+
 			if 'Size' in dataframe.columns and size_def and size_area:
 				fields.append('Size')
 				self.size_def = size_def
@@ -289,7 +302,7 @@ class Plot(object):
 		return num
 
 
-	def biomass(self, method = 'deterministic', equations = ['Chave_II']):
+	def biomass(self, method = 'deterministic', equations = ['Chave_II'], per_subplot = False):
 		"""
 		Estimates biomass (ton/ha) from plant community data.
 
@@ -325,24 +338,44 @@ class Plot(object):
 				else:
 					raise ValueError("Plot area has not been set.")
 
-				try:
-					if 'Alvarez' in equations:
-						self.alvarez += allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
-					if 'Chave_II' in equations:
-						self.chave_ii += allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
-					if 'Chave_I' in equations:
-						self.chave_i += allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
+				#try:
+				if 'Alvarez' in equations:
+					ta = allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
+					if len(self.alvarez_sps) > 1:
+						self.alvarez_sps[tree.Subplot] += ta
+					else:
+						self.alvarez += ta
 
+				if 'Chave_II' in equations:
+					ci = allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
+					if len(self.chave_ii_sps) > 1:
+						self.chave_ii_sps[tree.Subplot] += ci
+					else:
+						self.chave_ii += ci
+
+				if 'Chave_I' in equations:
+					cii = allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
+					if len(self.chave_i_sps) > 1:
+						self.chave_i_sps[tree.Subplot] += cii
+					else:
+						self.chave_i += cii
+
+				"""
 				except:
 					if u'StemID' in self.stems.columns:
 						print "Plot: {0}, StemID: {1}, TaxonID: {2}, Diameter: {3}, Density: {4}, E: {5}".format(self.name, tree.StemID, tree.TaxonID, tree.Diameter, dens, self.E)
 					else:
 						print "Plot: {0}, Stems row: {1}, TaxonID: {2}, Diameter: {3}, Density: {4}, E: {5}".format(self.name, tree.Index, tree.TaxonID, tree.Diameter, dens, self.E)
-
+				"""
+			if len(self.alvarez_sps) > 1:
+				self.alvarez = sum(self.alvarez_sps.values())
+				self.chave_i = sum(self.chave_i_sps.values())
+				self.chave_ii = sum(self.chave_ii_sps.values())
+			
 		return None
 
 
-	def basal_area(self):
+	def estimate_basal_area(self):
 
 		self.basal_area = 0.0
 
