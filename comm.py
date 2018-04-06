@@ -389,7 +389,11 @@ class Plot(object):
 			else:
 				raise ValueError("Plot area has not been set.")
 
-			self.basal_area += (((tree.Diameter / 2.0) ** 2) * np.pi) / area
+			tba = (((tree.Diameter / 2.0) ** 2) * np.pi) / area
+			if len(self.basal_area_sps) > 1:
+				self.basal_area_sps[tree.Subplot] += tba
+			else:
+				self.basal_area += tba
 
 		return None
 			
