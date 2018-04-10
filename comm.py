@@ -80,10 +80,15 @@ class Plot(object):
 			if 'Subplot' in dataframe.columns:
 				fields.append('Subplot')
 				self.basal_area_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				#print self.basal_area_sps
 				self.alvarez_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				#print self.alvarez_sps
 				self.chave_i_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				#print self.chave_i_sps
 				self.chave_ii_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				#print self.chave_ii_sps
 				self.coordinates_sps = {c: (None, None) for c in dataframe.Subplot.unique()}
+				#print self.coordinates_sps
 				
 			if 'StemID' in dataframe.columns:
 				fields.append('StemID')
@@ -378,7 +383,7 @@ class Plot(object):
 	def estimate_basal_area(self):
 
 		self.basal_area = 0.0
-
+		
 		for tree in self.stems.itertuples():
 
 			area = 0

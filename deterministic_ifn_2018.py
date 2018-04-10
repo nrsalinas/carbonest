@@ -6,11 +6,11 @@ import db_utils
 from credentials import mysql_db
 
 # Contenedor de resultados
-outfile = 'biomass_IFN_2018_20180405.csv'
+outfile = 'biomass_IFN_2017_20180406.csv'
 #outfile = 'biomass_IFN_2017_20180402.csv'
 buffout = 'PlotID,Subparcela,Area_basal,Alvarez,Chave_I,Chave_II,Longitud,Latitud\n'
 
-engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
+engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN'))
 
 #engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
 
@@ -82,7 +82,7 @@ for plotid in trees.Plot.unique(): #[158621]:
 		
 		for sps in range(1,6):
 			myplot.coordinates_sps[sps] = coors[(coors['Plot'] == plotid) & (coors['SPF'] == sps)]['Longitud'].iloc[0], coors[(coors['Plot'] == plotid) & (coors['SPF'] == sps)]['Latitud'].iloc[0]
-			
+					
 		myplot.set_holdridge(elevation_raster, precipitation_raster)
 
 		if myplot.holdridge in forest_change['holdridge']:
@@ -96,11 +96,13 @@ for plotid in trees.Plot.unique(): #[158621]:
 
 		myplot.biomass(equations = ['Chave_II', 'Chave_I', 'Alvarez'])
 		myplot.estimate_basal_area()
+		
 		#print myplot.chave_i
 		#print '\n'
 		
-		for sps in range(1,6):
-			buffout += "{0},{1},{2},{3},{4},{5},{6}\n".format(myplot.name, sps, myplot.basal_area_sps[sps], myplot.alvarez_sps[sps], myplot.chave_i_sps[sps], myplot.chave_ii_sps[sps], myplot.coordinates_sps[sps][0], myplot.coordinates_sps[sps][1])
+		for sps in myplot.basal_area_sps:
+			buffout += "{0},{1},{2},{3},{4},{5},{6},{7}\n".format(myplot.name, sps, myplot.basal_area_sps[sps], myplot.alvarez_sps[sps], myplot.chave_i_sps[sps], myplot.chave_ii_sps[sps], myplot.coordinates_sps[sps][0], myplot.coordinates_sps[sps][1])
+		
 		#buffout += "{0},{1},{2},{3},{4},{5},{6}\n".format(myplot.name, myplot.basal_area, myplot.alvarez, myplot.chave_i, myplot.chave_ii, myplot.coordinates[0], myplot.coordinates[1])
 
 with open(outfile, 'w') as fhandle:
