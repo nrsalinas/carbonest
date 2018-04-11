@@ -35,7 +35,9 @@ class Plot(object):
 	the lower DAP limit (cm) of the category (float).
 
 	- size_area (dict): Stem size effective areas. Keys are size codes (str) and
-	values the sampling area (ha) of the category (float).
+	values the sampling area (ha) of the category (float). If the plot is divided
+	in subplots areas should correspond to the effective area per subplot, otherwise
+	it will be assumed they are the total effective area per category in the plot.
 
 	"""
 	def __init__(self, csv_file = None, dataframe = None, size_def = None,
