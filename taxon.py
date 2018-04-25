@@ -3,6 +3,7 @@ import json
 import re
 
 class otu(object):
+	
 	def __init__(self):
 		self.family = None
 		self.genus = None
@@ -14,23 +15,23 @@ class otu(object):
 
 	def name(self, author = False):
 		out = u""
-		if self.genus:
-			if self.epithet:
-				if self.infraRank and self.infraEpithet:
+		if self.genus and isinstance(self.genus, unicode):
+			if self.epithet and isinstance(self.epithet, unicode):
+				if self.infraRank and self.infraEpithet and isinstance(self.infraRank, unicode) and isinstance(self.infraEpithet, unicode):
 					out = self.genus + u" " + self.epithet + u" " + self.infraRank + u" " + self.infraEpithet
 				else:
 					out = self.genus + u" " + self.epithet
 			else:
 				out = self.genus
-		elif self.family:
+		elif self.family and isinstance(self.family, unicode):
 			out = self.family
-		if author:
+		if author and isinstance(self.author, unicode):
 			out += u" " + self.author
 		return out
 
 	def binomial(self):
 		out = u""
-		if self.genus and self.epithet:
+		if self.genus and self.epithet and isinstance(self.genus, unicode) and isinstance(self.epithet, unicode):
 			out += self.genus + u" " + self.epithet
 		return out
 
@@ -97,7 +98,7 @@ def split_name(taxon_name):
 	return out
 
 
-def check_names(names, minimum_score = 0.95 ,
+def tnrs(names, minimum_score = 0.95 ,
 		tnrs_url = u"http://tnrs.iplantc.org/tnrsm-svc/matchNames" ,
 		resLevel=u"best", accepted = False):
 	"""
@@ -111,7 +112,7 @@ def check_names(names, minimum_score = 0.95 ,
 
 	- names (str, unicode, or list): Should not include authors.
 
-	- minimum_score (float):
+	- minimum_score (float): Minimum TNRS score to be accepted as a match.
 
 	- tnrs_url (unicode): URL address of the service.
 
@@ -129,11 +130,11 @@ def check_names(names, minimum_score = 0.95 ,
 		if isinstance(names[0], str):
 			names = u",".join(map(lambda x: url_space(x).decode('utf-8'), names))
 		elif isinstance(names[0], unicode):
-			pass
+			names = u",".join(map(lambda x: url_space(x), names))
 	elif isinstance(names, str):
 		names = url_space(names).decode('utf-8')
 	elif isinstance(names, unicode):
-		pass
+		names = url_space(names)
 	else:
 		checked = None ### Throw TypeError
 
@@ -217,10 +218,9 @@ def extract_year(tropicos_string):
 
 	return out
 
-
 def tropicos(name, rank, file_api_key = "tropicos_api_key"):
 	"""
-	rank : `sp` or `gen`
+	rank : `sp` or `gen`.
 	"""
 	api_key = ''
 	with open(file_api_key, 'r') as fh:
