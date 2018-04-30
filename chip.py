@@ -33,7 +33,7 @@ def strata_var(dtfr, domain,  variable):
 			B = sum(dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable] * dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), 'Area'])
 			C = sum(dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), 'Area'] ** 2)
 			
-			submean = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable].mean()
+			submean = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable].sum() / float(dtfr.shape[0])
 			
 			num = A - 2 * mean * B + submean ** 2 * C
 			den = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), 'Area'].sum() ** 2
@@ -67,7 +67,7 @@ def double_stratified_mean_var(dtfr, domain,  variable, strata_variances, strata
 	sv = 1.0 / (N - 1)
 	left = 0.0
 	right = 0.0
-	mean = dtfr.loc[(dtfr.Domain == domain), variable].mean()
+	mean = dtfr.loc[(dtfr.Domain == domain), variable].sum() / dtfr.shape[0]
 	
 	for h in strata_variances:
 		
