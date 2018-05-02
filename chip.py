@@ -11,6 +11,55 @@
 # 2 = no bosque
 # 3 = nan
 
+weights = {'Amazonia: Bosque': 0.3501,
+	'Amazonia: No-bosque': 0.0520,
+	'Andes: Bosque': 0.0941,
+	'Andes: No-bosque': 0.1619,
+	'Caribe: Bosque': 0.0155,
+	'Caribe: No-bosque': 0.1199,
+	'Orinoquia: Bosque': 0.0192,
+	'Orinoquia: No-bosque': 0.1284,
+	'Pacifico: Bosque': 0.0473,
+	'Pacifico: No-bosque': 0.0116}
+ 
+map_points = {
+	"Amazonia: Bosque": 7000,
+	"Amazonia: No-bosque": 1000,
+	"Andes: Bosque": 1800,
+	"Andes: No-bosque": 3200,
+	"Caribe: Bosque": 400,
+	"Caribe: No-bosque": 2400,
+	"Orinoquia: Bosque": 400,
+	"Orinoquia: No-bosque": 2600,
+	"Pacifico: Bosque": 1000,
+	"Pacifico: No-bosque": 200
+	 }
+	 
+areas_chip = {'Amazonia: Bosque': 39927789,
+	'Amazonia: No-bosque': 5929583,
+	'Andes: Bosque': 10727725,
+	'Andes: No-bosque': 18468341,
+	'Caribe: Bosque': 1773491,
+	'Caribe: No-bosque': 13676394,
+	'Orinoquia: Bosque': 2185583,
+	'Orinoquia: No-bosque': 14646741,
+	'Pacifico: Bosque': 5397941,
+	'Pacifico: No-bosque': 1323911}
+
+def domain_mean(dtfr, domain, variable, areas = areas_chip):
+	tot = 0.0
+	for h in areas:
+		if dtfr[(dtfr.Stratum == h) & (dtfr.Domain == domain)].shape[0] > 0:
+			sum_y = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable].sum()
+			#print sum_y
+			sum_a = float(dtfr.loc[(dtfr.Stratum == h), "Area"].sum())
+			#print sum_a
+			str_mean = sum_y / sum_a
+			#print str_mean
+			tot += str_mean * areas[h]
+	tot /= sum(areas.values())
+	return tot
+
 def strata_w(dtfr):
 	w = {}
 	for h in dtfr.Stratum.unique():
@@ -20,22 +69,31 @@ def strata_w(dtfr):
 def strata_var(dtfr, domain,  variable):
 	
 	s2 = {}
-	n = float(dtfr.shape[0])
-	
+		
 	for h in dtfr.Stratum.unique():
 
-		if dtfr[(dtfr.Stratum == h) & (dtfr.Domain == domain)].shape[0] > 1:
+		if dtfr[(dtfr.Stratum == h) & (dtfr.Domain == domain)].shape[0] > 0:
 
-			fact = n / (float(dtfr[dtfr.Stratum == h].shape[0]) - 1)
+			n_h = float(dtfr[dtfr.Stratum == h].shape[0])
+			fact = n_h ** 2 / (n_h - 1)
+			#print "fact:", fact
 			
 			A = sum(dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable] ** 2)		
+			#print "A:",A
 			B = sum(dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable] * dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), 'Area'])
-			C = sum(dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), 'Area'] ** 2)
+			#print "B:", B
+			C = sum(dtfr.loc[(dtfr.Stratum == h), 'Area'] ** 2)
+			#print "C:", C
 			
-			str_mean = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable].mean()
+			sum_y = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable].sum()
+			sum_a = dtfr.loc[(dtfr.Stratum == h), "Area"].sum()
+			str_mean = sum_y / sum_a
+			#print "sum_y", sum_y
+			#print "sum_a", sum_a
+			#print "str_mean:", str_mean
 			
 			num = A - 2 * str_mean * B + str_mean ** 2 * C
-			den = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), 'Area'].sum() ** 2
+			den = dtfr.loc[(dtfr.Stratum == h), 'Area'].sum() ** 2
 			
 			s2[h] = fact * num / den
 			
@@ -46,50 +104,70 @@ def strata_var(dtfr, domain,  variable):
 
 def stratified_mean_var(dtfr, strata_variances, strata_weights):
 	
-	sv = 0.0
+	sv = {}
 	for h in strata_variances:
-		sv += (strata_weights[h] ** 2 * strata_variances[h]) / (strata_weights[h] * dtfr.shape[0])
+		sv[h] = (strata_weights[h] ** 2 * strata_variances[h]) / dtfr[dtfr.Stratum == h].shape[0]
 	
 	return sv	
 	
 def post_stratified_mean_var(dtfr, strata_variances, strata_weights):
 	
-	pv = 0.0
+	pv = {}
 	for h in strata_variances:
-		pv += strata_weights[h] ** 2 * strata_variances[h] 
-		pv += ((strata_weights[h] - 1) * strata_variances[h]) / dtfr.shape[0]
-	
-	return pv / dtfr.shape[0]
+		pv[h] = strata_weights[h] * strata_variances[h] 
+		pv[h] += ((1 - strata_weights[h]) * strata_variances[h]) / dtfr.shape[0]
+		pv[h] /= dtfr.shape[0]
 
-def double_stratified_mean_var(dtfr, domain,  variable, strata_variances, strata_weights, map_strata_points):
+	return pv
+
+def double_stratified_mean_var(dtfr, domain,  variable, strata_variances, strata_weights, map_strata_points, myareas):
+	
 	N = float(sum(map_strata_points.values()))
-	sv = 1.0 / (N - 1)
+	print "N:", N
+	#sv = 1.0 / (N - 1)
+	sv = {}
 	left = 0.0
 	right = 0.0
 	
 	#mean = dtfr.loc[(dtfr.Domain == domain), variable].sum() / dtfr.shape[0]
-	mean = 0.0
-	for h in strata_weights:
-		mean += dtfr.loc[(dtfr.Domain == domain) & (dtfr.Stratum == h), variable].mean() * strata_weights[h]
+	mean = domain_mean(dtfr, domain, variable, myareas)
+
+	print "mean:", mean
 	
 	for h in strata_variances:
 		
-		if dtfr[(dtfr.Stratum == h)].shape[0] > 1 and map_strata_points[h] > 1 \
-			and strata_variances[h] > 0: 
-		
-			str_mean = dtfr.loc[(dtfr.Domain == domain) & (dtfr.Stratum == h), variable].mean()
+		print "\n",h
 			
-			left += (map_strata_points[h] / N) * strata_variances[h] * (map_strata_points[h] - 1) \
+		if dtfr[(dtfr.Stratum == h)].shape[0] > 1 and map_strata_points[h] > 1 and strata_variances[h] > 0: 
+
+			sv[h] = 1.0 / (N - 1)
+	
+			#str_mean = dtfr.loc[(dtfr.Domain == domain) & (dtfr.Stratum == h), variable].mean()
+			sum_y = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable].sum()
+			sum_a = dtfr.loc[(dtfr.Stratum == h), "Area"].sum()
+			str_mean = sum_y / sum_a
+			
+			print "str_mean:", str_mean
+			
+			left = (map_strata_points[h] / N) * strata_variances[h] * (map_strata_points[h] - 1) \
 				/ ((dtfr.shape[0] * strata_weights[h]) * (N - 1))
+				
+			print "left:", left
 			
-			right += (map_strata_points[h] / N) * (mean - str_mean) ** 2
+			right = (map_strata_points[h] / N) * (mean - str_mean) ** 2
 					
-	sv *= right
-	sv += left
+			print "right:", right
+			
+			sv[h] *= right
+			sv[h] += left
+	
+		else:
+			sv[h] = 0.0
 	
 	return sv	
 	
 def double_post_stratified_mean_var(dtfr, domain,  variable, strata_variances, strata_weights, map_strata_points):
+	
 	N = float(sum(map_strata_points.values()))
 	sv = 1.0 / (N - 1)
 	left = 0.0
