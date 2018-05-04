@@ -137,32 +137,38 @@ def double_stratified_mean_var(dtfr, domain,  variable, strata_variances, strata
 	for h in strata_variances:
 		
 		print "\n",h
+		sv[h] = 1.0 / (N - 1)
 			
-		if dtfr[(dtfr.Stratum == h)].shape[0] > 1 and map_strata_points[h] > 1 and strata_variances[h] > 0: 
+		#str_mean = dtfr.loc[(dtfr.Domain == domain) & (dtfr.Stratum == h), variable].mean()
+		sum_y = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable].sum()
+		sum_a = dtfr.loc[(dtfr.Stratum == h), "Area"].sum()
+		str_mean = sum_y / sum_a
+		
+		print "str_mean:", str_mean
 
-			sv[h] = 1.0 / (N - 1)
+		right = (map_strata_points[h] / N) * (mean - str_mean) ** 2
+				
+		print "right:", right
+		
+		#if dtfr[(dtfr.Stratum == h)].shape[0] > 0 and map_strata_points[h] > 0 and strata_variances[h] > 0: 
+		if map_strata_points[h] > 0:
 	
-			#str_mean = dtfr.loc[(dtfr.Domain == domain) & (dtfr.Stratum == h), variable].mean()
-			sum_y = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), variable].sum()
-			sum_a = dtfr.loc[(dtfr.Stratum == h), "Area"].sum()
-			str_mean = sum_y / sum_a
-			
-			print "str_mean:", str_mean
 			
 			left = (map_strata_points[h] / N) * strata_variances[h] * (map_strata_points[h] - 1) \
-				/ ((dtfr.shape[0] * strata_weights[h]) * (N - 1))
+				/ (float(dtfr[dtfr.Stratum == h].shape[0]) * (N - 1))
 				
 			print "left:", left
+			print "AG6:", (map_strata_points[h] / N)
+			print "AF6:", map_strata_points[h]
+			print "AN6:", strata_variances[h]
+			print "AF17:", N
+			print "AE6:" , float(dtfr[dtfr.Stratum == h].shape[0])
 			
-			right = (map_strata_points[h] / N) * (mean - str_mean) ** 2
-					
-			print "right:", right
-			
-			sv[h] *= right
-			sv[h] += left
-	
 		else:
-			sv[h] = 0.0
+			left = 0.0
+	
+		sv[h] *= right
+		sv[h] += left
 	
 	return sv	
 	
