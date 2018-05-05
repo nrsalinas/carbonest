@@ -304,15 +304,37 @@ def cov_strata(dtfr, domain, domain_p,  var_y, var_x ):
 	return covs
 
 
-def cov_strata_total(dtfr, domain, domain_p,  var_y, var_x, strata_weights, myareas ):
+def cov_simple_stratified(dtfr, domain, domain_p,  var_y, var_x, strata_weights, myareas ):
 	tcov = 0.0
 	covs = cov_strata(dtfr, domain, domain_p,  var_y, var_x )
 	
 	for h in strata_weights:
-		tcov += strata_weights[h] ** 2 * covs[h] / dtfr[dtfr.Stratum == h].shape[0]
+		print "\n",h
+		tcov_h = strata_weights[h] ** 2 * covs[h] / dtfr[dtfr.Stratum == h].shape[0]
+		print tcov_h
+		tcov += tcov
+		
+	# Chip's formula doesn't have the exponential
+	tcov *= sum(myareas.values()) ** 2
 	
-	#tcov *= (dtfr["Area"].sum()) ** 2
-	tcov *= sum(myareas.values())
+	return tcov
+	
+	
+def cov_simple_post_stratified(dtfr, domain, domain_p,  var_y, var_x, strata_weights, myareas ):
+	tcov = 0.0
+	covs = cov_strata(dtfr, domain, domain_p,  var_y, var_x )
+	
+	for h in strata_weights:
+		print "\n",h
+		print "n:", dtfr.shape[0]
+		print "w:", strata_weights[h]
+		print "strata covariance:", covs[h]
+		tcov_h = (1 / float(dtfr.shape[0])) * ((strata_weights[h] * covs[h]) + ((1 - strata_weights[h]) * covs[h] / float(dtfr.shape[0])))
+		print tcov_h
+		tcov += tcov
+		
+	# Chip's formula doesn't have the exponential
+	tcov *= sum(myareas.values()) ** 2
 	
 	return tcov
 	
