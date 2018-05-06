@@ -314,7 +314,7 @@ def cov_simple_stratified(dtfr, domain, domain_p,  var_y, var_x, strata_weights,
 		print tcov_h
 		tcov += tcov
 		
-	# Chip's formula doesn't have the exponential
+	# In Chip's formula the sum of the areas is not exponentiated
 	tcov *= sum(myareas.values()) ** 2
 	
 	return tcov
@@ -333,7 +333,7 @@ def cov_simple_post_stratified(dtfr, domain, domain_p,  var_y, var_x, strata_wei
 		print tcov_h
 		tcov += tcov
 		
-	# Chip's formula doesn't have the exponential
+	# In Chip's formula the sum of the areas is not exponentiated
 	tcov *= sum(myareas.values()) ** 2
 	
 	return tcov
