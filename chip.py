@@ -331,14 +331,112 @@ def cov_simple_post_stratified(dtfr, domain, domain_p,  var_y, var_x, strata_wei
 		print "strata covariance:", covs[h]
 		tcov_h = (1 / float(dtfr.shape[0])) * ((strata_weights[h] * covs[h]) + ((1 - strata_weights[h]) * covs[h] / float(dtfr.shape[0])))
 		print tcov_h
-		tcov += tcov
+		tcov += tcov_h
 		
 	# Chip's formula doesn't have the exponential
 	tcov *= sum(myareas.values()) ** 2
 	
 	return tcov
 	
+
+def cov_double_stratified(dtfr, domain, domain_p,  var_y, var_x, strata_weights, myareas, map_strata_points):
+	tcov = 0.0
+	covs = cov_strata(dtfr, domain, domain_p,  var_y, var_x )
+	tot_points = float(sum(map_strata_points.values()))
 	
+	mean_y = domain_mean(dtfr, domain, var_y, myareas)
+	print "mean_y:", mean_y
+	
+	mean_x = domain_mean(dtfr, domain_p, var_x, myareas)
+	print "mean_x:", mean_x
+	
+	for h in strata_weights:
+		print "\n",h
+		print "n:", dtfr.shape[0]
+		n_h = float(dtfr[dtfr.Stratum == h].shape[0])
+		print "n_h:", n_h
+		print "puntos mapa:", map_strata_points[h]
+		print "w:", strata_weights[h]
+		print "strata covariance:", covs[h]
+		
+		sum_y = 0.0
+		if dtfr[(dtfr.Stratum == h) & (dtfr.Domain == domain)].shape[0] > 0:
+			sum_y = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), var_y].sum()
+			
+		sum_a = dtfr.loc[(dtfr.Stratum == h), "Area"].sum()
+		mean_hy = sum_y / sum_a
+		
+		print "mean_hy:",mean_hy
+		
+		sum_x = 0.0
+		if dtfr[(dtfr.Stratum == h) & (dtfr.Domain == domain_p)].shape[0] > 0:
+			sum_x = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain_p), var_x].sum()
+			
+		mean_hx = sum_x / sum_a
+		print "mean_hx:",mean_hx
+
+		tcov_h = strata_weights[h] * (map_strata_points[h] - 1) / (tot_points - 1) * covs[h] / n_h
+		tcov += 1 / (tot_points - 1) * strata_weights[h] * (mean_hy - mean_y) * (mean_hx - mean_x)
+		
+		print tcov_h
+		tcov += tcov_h
+		
+	tcov *= sum(myareas.values()) ** 2
+	
+	return tcov
+	
+	
+def cov_double_post_stratified(dtfr, domain, domain_p,  var_y, var_x, strata_weights, myareas, map_strata_points):
+	tcov = 0.0
+	covs = cov_strata(dtfr, domain, domain_p,  var_y, var_x )
+	tot_points = float(sum(map_strata_points.values()))
+	print "tot_points:", tot_points
+	
+	mean_y = domain_mean(dtfr, domain, var_y, myareas)
+	print "mean_y:", mean_y
+	
+	mean_x = domain_mean(dtfr, domain_p, var_x, myareas)
+	print "mean_x:", mean_x
+	
+	for h in strata_weights:
+		print "\n",h
+		print "n:", dtfr.shape[0]
+		n_h = float(dtfr[dtfr.Stratum == h].shape[0])
+		print "n_h:", n_h
+		print "puntos mapa:", map_strata_points[h]
+		print "w:", strata_weights[h]
+		print "strata covariance:", covs[h]
+		
+		sum_y = 0.0
+		if dtfr[(dtfr.Stratum == h) & (dtfr.Domain == domain)].shape[0] > 0:
+			sum_y = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain), var_y].sum()
+			
+		sum_a = dtfr.loc[(dtfr.Stratum == h), "Area"].sum()
+		mean_hy = sum_y / sum_a
+		
+		print "mean_hy:",mean_hy
+		
+		sum_x = 0.0
+		if dtfr[(dtfr.Stratum == h) & (dtfr.Domain == domain_p)].shape[0] > 0:
+			sum_x = dtfr.loc[(dtfr.Stratum == h) & (dtfr.Domain == domain_p), var_x].sum()
+			
+		mean_hx = sum_x / sum_a
+		print "mean_hx:",mean_hx
+		
+		print "strata cov:", covs[h]
+		l = (map_strata_points[h] - 1) / (tot_points - 1) * covs[h] / float(dtfr.shape[0])
+		c = (1 - strata_weights[h]) *  covs[h] / float(dtfr.shape[0]) ** 2
+		r = 1 / (tot_points - 1) * strata_weights[h] * (mean_hy - mean_y) * (mean_hx - mean_x)
+		print "left:", l
+		print "center:", c
+		print "right:", r
+		tcov_h = l + c + r
+		print tcov_h
+		tcov += tcov_h
+		
+	tcov *= sum(myareas.values()) ** 2
+	
+	return tcov
 	
 	
 	
