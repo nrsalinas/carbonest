@@ -8,15 +8,17 @@ import re
 import taxon
 import codecs
 
-min_score = 0.95
+min_score = 0.90
 user = u"root"
 password = u"Soledad1"
 database = u'IFN_2018' # u'Quimera' | u'IFN' | u'IFN_2018'
 names_included = []
 ids_included = []
 TNRS_ID = None
+Tropicos_ID = None
+IPNI_ID = None
 bffrlog = ""
-logfile = "IFN_2018_tax_ver_20180327.txt"
+logfile = "IFN_2018_tax_ver_20180408.txt"
 
 def escape_quote(autor):
 	out = None
@@ -30,6 +32,10 @@ engine = al.create_engine(
 
 conn = engine.connect()
 
+##################################
+# Fuentes de autoridad taxonomica
+##################################
+
 query = u"SELECT FuenteID FROM Fuentes WHERE Acronimo = 'TNRS' AND YEAR = 2018"
 ex = conn.execute(query)
 if ex.rowcount > 0:
@@ -38,6 +44,26 @@ else:
 	query = u"INSERT INTO Fuentes (Nombre, Acronimo, Year, Url) VALUES ('Taxonomic Name Resolution Service', 'TNRS', 2018, 'http://tnrs.iplantc.org')"
 	ex = conn.execute(query)
 	TNRS_ID = int(ex.lastrowid)
+
+query = u"SELECT FuenteID FROM Fuentes WHERE Acronimo = 'Tropicos' AND YEAR = 2018"
+ex = conn.execute(query)
+if ex.rowcount > 0:
+	TNRS_ID = int(ex.fetchone()[u'FuenteID'])
+else:
+	query = u"INSERT INTO Fuentes (Nombre, Acronimo, Year, Url) VALUES ('Tropicos', 'TROPICOS', 2018, 'http://www.tropicos.org/')"
+	ex = conn.execute(query)
+	Tropicos_ID = int(ex.lastrowid)
+
+
+query = u"SELECT FuenteID FROM Fuentes WHERE Acronimo = 'IPNI' AND YEAR = 2018"
+ex = conn.execute(query)
+if ex.rowcount > 0:
+	TNRS_ID = int(ex.fetchone()[u'FuenteID'])
+else:
+	query = u"INSERT INTO Fuentes (Nombre, Acronimo, Year, Url) VALUES ('The International Plant Name Index', 'IPNI', 2018, 'http://www.ipni.org/')"
+	ex = conn.execute(query)
+	IPNI_ID = int(ex.lastrowid)
+
 
 tax = pd.read_sql_table(table_name='Taxonomia',con=conn, index_col='TaxonID')
 
@@ -50,6 +76,7 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 	# Nombres sin Genero no son revisados
 	print row.Genero, row.Epiteto
 	name = None
+	aut = None # Autoridad taxonomica
 	gen, epi = u'', u''
 	if type(row.Genero) == unicode:
 		gen = re.sub(r'\s+', u'', row.Genero)
@@ -86,6 +113,7 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 					trop = taxon.tropicos(newquery, rank)
 
 			if trop[1]:
+				aut = Tropicos_ID
 				revised = trop
 				bffrlog += ">>>" + revised[1].name() + "\n"
 
@@ -93,6 +121,7 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 			else:
 				kew = taxon.ipni(name)
 				if kew[1]:
+					Aut = IPNI_ID
 					revised = kew
 					bffrlog += ">>>" + revised[1].name() + "\n"
 
@@ -101,8 +130,28 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 					bffrlog += ">>> no encontrado <<<" + "\n"
 
 
-			####### Falta por actualizar vvvvvv
-			if revised[1]:
+			####### Falta por actualizar #########
+			if revised[1] and revised[1].genus == gen and revised[0].epithet == epi:
+				# No changes, but try to update authors
+				
+				if pd.notna(revised[1].author):
+					
+					if pd.isna(epi) or epi == u'':
+						mytax = int(tax[(tax.Genero == gen) & tax.Epiteto.isna()].index[0])
+
+					else:
+						mytax = int(tax[(tax.Genero == gen) & (tax.Epiteto == epi)].index[0])
+					
+					if aut:
+						query = u"UPDATE Taxonomia SET Autor = '{0}', Fuente = {1} WHERE TaxonID = {2}".format(revised[1].author, aut, mytax)
+					else:
+						query = u"UPDATE Taxonomia SET Autor = '{0}' WHERE TaxonID = {1}".format(revised[1].author, mytax)
+						
+					
+					ex = conn.execute(query)
+				
+			
+			elif revised[1]:
 				# Update record
 				already_in_db = False
 				dad = int()
@@ -123,9 +172,20 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 
 					else:
 						mytax = int(tax[(tax.Genero == gen) & (tax.Epiteto == epi)].index[0])
-
-					query = u"UPDATE Taxonomia SET SinonimoDe = {0} WHERE TaxonID = {1}".format(dad, mytax)
+					
+					if aut:
+						query = u"UPDATE Taxonomia SET SinonimoDe = {0}, Fuente = {1} WHERE TaxonID = {2}".format(dad, aut, mytax)
+					else:
+						query = u"UPDATE Taxonomia SET SinonimoDe = {0}, Fuente = NULL WHERE TaxonID = {1}".format(dad, mytax)
 					ex = conn.execute(query)
+					
+					# Include author
+					if len(revised[1].author) > 1:
+						if aut:
+							query = u"UPDATE Taxonomia SET Autor = '{0}', Fuente = {1} WHERE TaxonID = {2}".format(revised[1].author, aut, dad)
+						else:
+							query = u"UPDATE Taxonomia SET Autor = '{0}', Fuente = NULL WHERE TaxonID = {1}".format(revised[1].author, dad)
+						ex = conn.execute(query)
 
 
 				elif revised[1] in names_included:
@@ -139,7 +199,10 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 					else:
 						mytax = int(tax[(tax.Genero == gen) & (tax.Epiteto == epi)].index[0])
 
-					query = u"UPDATE Taxonomia SET SinonimoDe = {0} WHERE TaxonID = {1}".format(dad, mytax)
+					if aut:
+						query = u"UPDATE Taxonomia SET SinonimoDe = {0}, Fuente = {1} WHERE TaxonID = {2}".format(dad, aut, mytax)
+					else:
+						query = u"UPDATE Taxonomia SET SinonimoDe = {0}, Fuente = NULL WHERE TaxonID = {1}".format(dad, mytax)
 					ex = conn.execute(query)
 
 
@@ -148,14 +211,24 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 					names_included.append(revised[1])
 					mytax = int()
 					if revised[1].epithet is None: # Got only a genus name
-						query = u"INSERT INTO Taxonomia (Familia, Genero, Autor, Fuente) " + \
+						if aut:
+							query = u"INSERT INTO Taxonomia (Familia, Genero, Autor, Fuente) " + \
 									u"VALUES ('{0}', '{1}', '{2}', {3})".format(revised[1].family,
-									revised[1].genus, escape_quote(revised[1].author), TNRS_ID)
+									revised[1].genus, escape_quote(revised[1].author), aut)
+						else:
+							query = u"INSERT INTO Taxonomia (Familia, Genero, Autor, Fuente) " + \
+									u"VALUES ('{0}', '{1}', '{2}', NULL)".format(revised[1].family,
+									revised[1].genus, escape_quote(revised[1].author))
 					else:
-						query = u"INSERT INTO Taxonomia (Familia, Genero, Epiteto, Autor, Fuente) " + \
+						if aut:
+							query = u"INSERT INTO Taxonomia (Familia, Genero, Epiteto, Autor, Fuente) " + \
 							   u"VALUES ('{0}', '{1}', '{2}', '{3}', {4})".format(revised[1].family,
-								revised[1].genus, revised[1].epithet, escape_quote(revised[1].author), TNRS_ID)
-
+								revised[1].genus, revised[1].epithet, escape_quote(revised[1].author), aut)
+						else:
+							query = u"INSERT INTO Taxonomia (Familia, Genero, Epiteto, Autor, Fuente) " + \
+							   u"VALUES ('{0}', '{1}', '{2}', '{3}', NULL)".format(revised[1].family,
+								revised[1].genus, revised[1].epithet, escape_quote(revised[1].author))
+								
 					ex = conn.execute(query)
 					dad = int(ex.lastrowid)
 					ids_included.append(dad)
@@ -166,8 +239,12 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 					else:
 						mytax = int(tax[(tax.Genero == gen) & (tax.Epiteto == epi)].index[0])
 
-					query = u"UPDATE Taxonomia SET SinonimoDe = {0} WHERE TaxonID = {1}".format(dad, mytax)
+					if aut:
+						query = u"UPDATE Taxonomia SET SinonimoDe = {0}, Fuente = {1} WHERE TaxonID = {2}".format(dad, aut, mytax)
+					else:
+						query = u"UPDATE Taxonomia SET SinonimoDe = {0}, Fuente = NULL WHERE TaxonID = {1}".format(dad, mytax)
 					ex = conn.execute(query)
+					
 
 		except:
 			bffrlog += ">>> Problema con nombre {0} <<<\n".format(name)
