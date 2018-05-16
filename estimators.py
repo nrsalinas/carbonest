@@ -1,6 +1,42 @@
 from pandas import DataFrame
 from scipy.stats import t
 
+weights = {'Amazonia: Bosque': 0.3501,
+	'Amazonia: No-bosque': 0.0520,
+	'Andes: Bosque': 0.0941,
+	'Andes: No-bosque': 0.1619,
+	'Caribe: Bosque': 0.0155,
+	'Caribe: No-bosque': 0.1199,
+	'Orinoquia: Bosque': 0.0192,
+	'Orinoquia: No-bosque': 0.1284,
+	'Pacifico: Bosque': 0.0473,
+	'Pacifico: No-bosque': 0.0116}
+ 
+map_points = {
+	"Amazonia: Bosque": 7000,
+	"Amazonia: No-bosque": 1000,
+	"Andes: Bosque": 1800,
+	"Andes: No-bosque": 3200,
+	"Caribe: Bosque": 400,
+	"Caribe: No-bosque": 2400,
+	"Orinoquia: Bosque": 400,
+	"Orinoquia: No-bosque": 2600,
+	"Pacifico: Bosque": 1000,
+	"Pacifico: No-bosque": 200
+	 }
+	 
+areas = {'Amazonia: Bosque': 39927789,
+	'Amazonia: No-bosque': 5929583,
+	'Andes: Bosque': 10727725,
+	'Andes: No-bosque': 18468341,
+	'Caribe: Bosque': 1773491,
+	'Caribe: No-bosque': 13676394,
+	'Orinoquia: Bosque': 2185583,
+	'Orinoquia: No-bosque': 14646741,
+	'Pacifico: Bosque': 5397941,
+	'Pacifico: No-bosque': 1323911}
+	
+
 class Estimator(object):
 	
 	def __init__(self, dtfr, areas, weights):
@@ -8,31 +44,51 @@ class Estimator(object):
 		if isinstance(dtfr, DataFrame):
 			self.dtfr = dtfr
 		
-		self.strata_areas = areas
+		self.areas = areas
 		self.weights = weights
 		self.s2 = None # Strata variances
 		self.map_points = None
 		self.covs = None
 		
+	
+	def stratum_mean(self, stratum, domain, variable):
+		sum_y = 0.0
+		if self.dtfr[(self.dtfr.Stratum == stratum) & (self.dtfr.Domain == domain)].shape[0] > 0:
+			sum_y = self.dtfr.loc[(self.dtfr.Stratum == stratum) & (self.dtfr.Domain == domain), variable].sum()
+			
+		sum_a = self.dtfr.loc[(self.dtfr.Stratum == stratum), "Area"].sum()
+		str_mean = sum_y / float(sum_a)
+		return str_mean
 
+		
 	def domain_mean(self, domain, variable):
 		tot = 0.0
 		
-		for h in self.strata_areas:
+		for h in self.areas:
+			tot += self.stratum_mean(h, domain, variable) * self.areas[h]
 		
-			if self.dtfr[(self.dtfr.Stratum == h) & (self.dtfr.Domain == domain)].shape[0] > 0:
-		
-				sum_y = self.dtfr.loc[(self.dtfr.Stratum == h) & (self.dtfr.Domain == domain), variable].sum()
-				sum_a = float(self.dtfr.loc[(self.dtfr.Stratum == h), "Area"].sum())
-				str_mean = sum_y / sum_a
-				tot += str_mean * self.strata_areas[h]
-		
-		tot /= sum(self.strata_areas.values())
+		tot /= sum(self.areas.values())
 		
 		return tot
+
 		
+	def total(self, domain, variable):
+		tot = 0.0
+		for h in self.dtfr.Stratum.unique():
+			#print "\n",h
+			str_mean = self.stratum_mean(h, domain, variable)
+			#print str_mean
+			tot += str_mean * self.areas[h]
+			#print str_mean * self.areas[h]
+		return tot
+		
+	
+	def ratio(self, domain, domain_p, var_y, var_x):
+		return self.total(domain, var_y) / self.total(domain_p, var_x)
+		
+
 	def var_total(self, var_dict):
-		return sum(self.strata_areas.values()) ** 2 * sum(var_dict.values())
+		return sum(self.areas.values()) ** 2 * sum(var_dict.values())
 
 
 	def get_strata_var(self, domain, variable):
@@ -78,17 +134,19 @@ class Estimator(object):
 		vartot = self.var_total(sv)
 		std_err = (vartot / self.dtfr.shape[0]) ** 0.5
 		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
-		poptot = sum(self.strata_areas.values()) * mean
+		poptot = sum(self.areas.values()) * mean
+		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
 		conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
 		out = {'Domain mean': mean,
 			'Population total': poptot,
 			'Strata variances': sv, 
-			'Variance of the total': vartot, 
+			'Variance of the total': vartot,
+			'Relative error': rel_error,
 			'Confidence interval': conf_inter}
 		
 		return out
 		
-	def post_stratified_mean_var(self, domain, variable):
+	def post_stratified_mean_var(self, domain, variable, confidence = 0.95):
 		pv = {}
 		self.get_strata_var(domain, variable)
 		
@@ -97,10 +155,23 @@ class Estimator(object):
 			pv[h] += ((1 - self.weights[h]) * self.s2[h]) / self.dtfr.shape[0]
 			pv[h] /= self.dtfr.shape[0]
 
-		return pv
+		vartot = self.var_total(pv)
+		std_err = (vartot / self.dtfr.shape[0]) ** 0.5
+		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
+		poptot = sum(self.areas.values()) * mean
+		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
+		conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
+		out = {'Domain mean': mean,
+			'Population total': poptot,
+			'Strata variances': pv, 
+			'Variance of the total': vartot, 
+			'Relative error': rel_error,
+			'Confidence interval': conf_inter}
+
+		return out
 
 
-	def double_stratified_mean_var(self, domain,  variable):
+	def double_stratified_mean_var(self, domain,  variable, confidence = 0.95):
 		
 		self.get_strata_var(domain, variable)
 		
@@ -136,10 +207,23 @@ class Estimator(object):
 			sv[h] *= right
 			sv[h] += left
 		
-		return sv	
+		vartot = self.var_total(sv)
+		std_err = (vartot / self.dtfr.shape[0]) ** 0.5
+		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
+		poptot = sum(self.areas.values()) * mean
+		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
+		conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
+		out = {'Domain mean': mean,
+			'Population total': poptot,
+			'Strata variances': sv, 
+			'Variance of the total': vartot,
+			'Relative error': rel_error,
+			'Confidence interval': conf_inter}
+		
+		return out	
 		
 
-	def double_post_stratified_mean_var(self, domain,  variable):
+	def double_post_stratified_mean_var(self, domain,  variable, confidence = 0.95):
 		
 		self.get_strata_var(domain, variable)
 		sv = {}
@@ -172,7 +256,20 @@ class Estimator(object):
 			sv[h] *= right
 			sv[h] += left + center
 		
-		return sv
+		vartot = self.var_total(sv)
+		std_err = (vartot / self.dtfr.shape[0]) ** 0.5
+		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
+		poptot = sum(self.areas.values()) * mean
+		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
+		conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
+		out = {'Domain mean': mean,
+			'Population total': poptot,
+			'Strata variances': sv, 
+			'Variance of the total': vartot,
+			'Relative error': rel_error,
+			'Confidence interval': conf_inter}
+		
+		return out	
 	
 
 	def get_cov_strata(self, domain, domain_p,  var_y, var_x ):
@@ -232,7 +329,7 @@ class Estimator(object):
 			
 			tcov += tcov_h
 			
-		tcov *= sum(self.strata_areas.values()) ** 2
+		tcov *= sum(self.areas.values()) ** 2
 		
 		return tcov
 		
@@ -250,7 +347,7 @@ class Estimator(object):
 			tcov += tcov_h
 			
 		# In Chip's formula the sum of the areas is not exponentiated
-		tcov *= sum(self.strata_areas.values()) ** 2
+		tcov *= sum(self.areas.values()) ** 2
 		
 		return tcov
 		
@@ -287,7 +384,7 @@ class Estimator(object):
 				
 			tcov += tcov_h
 			
-		tcov *= sum(self.strata_areas.values()) ** 2
+		tcov *= sum(self.areas.values()) ** 2
 		
 		return tcov
 
@@ -325,6 +422,39 @@ class Estimator(object):
 
 			tcov += tcov_h
 			
-		tcov *= sum(self.strata_areas.values()) ** 2
+		tcov *= sum(self.areas.values()) ** 2
 		
 		return tcov
+		
+	
+	def ratio_var(self, domain, domain_p, var_y, var_x, double_sampl = False, post_strat = False):
+		cov = None
+		var_y_dict = None 
+		var_x_dict = None
+		
+		if double_sampl:
+			if post_strat:
+				cov = self.cov_double_post_stratified(domain, domain_p,  var_y, var_x)
+				var_y_dict = self.double_post_stratified_mean_var(domain, var_y) 
+				var_x_dict = self.double_post_stratified_mean_var(domain_p, var_x)
+			else:
+				cov = self.cov_double_stratified(domain, domain_p,  var_y, var_x)
+				var_y_dict = self.double_stratified_mean_var(domain, var_y) 
+				var_x_dict = self.double_stratified_mean_var(domain_p, var_x)
+		else:
+			if post_strat:
+				cov = self.cov_post_stratified(domain, domain_p, var_y, var_x)
+				var_y_dict = self.post_stratified_mean_var(domain, var_y) 
+				var_x_dict = self.post_stratified_mean_var(domain_p, var_x)
+			else:
+				cov = self.cov_stratified(domain, domain_p,  var_y, var_x)
+				var_y_dict = self.stratified_mean_var(domain, var_y) 
+				var_x_dict = self.stratified_mean_var(domain_p, var_x)
+
+		var = (self.var_total(domain, var_y) + 
+				var_y_dict['Variance of the total'] +
+				self.ratio(domain, domain_p, var_y, var_x)**2 * var_x_dict['Variance of the total'] - 
+				2 * self.ratio(domain, domain_p, var_y, var_x) * cov) / self.total(domain_p, var_x)
+		
+		return None
+		
