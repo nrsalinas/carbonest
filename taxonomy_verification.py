@@ -101,7 +101,7 @@ for row in tax_orphan[[u'Genero',u'Epiteto']].itertuples():
 
 			# Segundo intento con tropicos despues de verificacion en tnrs
 			if not trop[1]:
-				tnrs = taxon.check_names(name)
+				tnrs = taxon.check_names(name, minimum_score = min_score)
 				newquery = u''
 				if tnrs[0][1]:
 					newquery = tnrs[0][1].name()

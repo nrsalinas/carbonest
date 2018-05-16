@@ -403,6 +403,72 @@ def chaveI_original(diameter, density, forest_type):
 	return AGB
 
 
+def alvarez_dh(diameter, height, density, forest_type):
+	"""
+	Estimates tree biomass (Kg) through the allometric equations type I.1
+	proposed by Alvarez et al. 2012, Forest Ecology and Managament 267: 297-308. 
+	Returns a float.
+
+	Arguments:
+
+	- diameter (float): Diameter (cm) at breast height of the tree.
+
+	- height: Tree total height (m).
+
+	- density (float); Wood density (gr/cm^3).
+
+	- forest_type (str): Climatic clasification of the sampling site. Valid
+	values are `tropical_dry`, `tropical_moist`, `tropical_wet`,
+	`premontane_moist`, `lower_montane_wet`, `montane_wet`.
+
+	"""
+
+	AGB = 0
+	c = 0.587 * np.log(height)
+	b = 2.081 * np.log(diameter)
+
+	if forest_type == 'tropical_dry':
+
+		a = -2.217
+		d = 1.092 * np.log(density)
+		AGB = np.exp(a + b + c + d)
+
+	elif forest_type == 'tropical_moist':
+
+		a = -2.919
+		d = 0.391 * np.log(density)
+		AGB = np.exp(a + b + c + d)
+
+	elif forest_type == 'tropical_wet':
+
+		a = -2.857
+		d = 0.453 * np.log(density)
+		AGB = np.exp(a + b + c + d)
+
+	elif forest_type == 'premontane_moist':
+
+		a = -2.221
+		d = 1.089 * np.log(density)
+		AGB = np.exp(a + b + c + d)
+
+	elif forest_type == 'lower_montane_wet':
+
+		a = -3.670
+		d = -0.360 * np.log(density)
+		AGB = np.exp(a + b + c + d)
+
+	elif forest_type == 'montane_wet':
+
+		a = -2.294
+		d = 1.016 * np.log(density)
+		AGB = np.exp(a + b + c + d)
+
+	else:
+		raise ValueError
+
+	return AGB
+
+
 def alvarez(diameter, density, forest_type):
 	"""
 	Estimates tree biomass (Kg) through the allometric equations type II.1
@@ -474,7 +540,7 @@ def alvarez(diameter, density, forest_type):
 
 def chaveII(diameter, density, longitude = None, latitude = None, raster_file = None, e_value = None):
 	"""
-	Estimates tree biomass (Kg) through the allometric equation proposed by
+	Estimates tree biomass (Kg) through the allometric equation (# 7) proposed by
 	Chave et al. 2014, Global Change Biology 20: 3177-3190 (Chave II), but the
 	equation coefficients were correted via least squares. It is necessary to
 	parse either a coefficient E value or all the info required to estimate it:
@@ -485,7 +551,7 @@ def chaveII(diameter, density, longitude = None, latitude = None, raster_file = 
 
 	- diameter (float): Diameter (cm) at breast height of the tree.
 
-	- density (float); Wood density (gr/cm^3).
+	- density (float): Wood density (gr/cm^3).
 
 	- longitud, latitude (float): Geographic coordinates of the sampling site.
 
@@ -501,6 +567,26 @@ def chaveII(diameter, density, longitude = None, latitude = None, raster_file = 
 	if isinstance(e_value, float) or isinstance(e_value, int):
 		AGB = np.exp(-2.1094 - 0.8965 * e_value + 0.9228 * np.log(density) + 2.7943 * np.log(diameter) - 0.0459 * np.log(diameter)**2)
 
+	return AGB
+
+
+def chaveII_dh(diameter, height, density):
+	"""
+	Estimates tree biomass (Kg) through the allometric equation (#4) proposed by
+	Chave et al. 2014, Global Change Biology 20: 3177-3190 (Chave II), but the
+	equation coefficients were correted via least squares. Returns a float.
+
+	Arguments:
+
+	- diameter (float): Diameter (cm) at breast height of the tree.
+
+	- height: Tree total height (m).
+
+	- density (float): Wood density (gr/cm^3).
+
+	"""
+	
+	AGB = 0.06311 * (density * height * diameter ** 2) ** 0.9759
 	return AGB
 
 

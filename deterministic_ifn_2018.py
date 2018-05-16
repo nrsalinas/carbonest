@@ -6,11 +6,11 @@ import db_utils
 from credentials import mysql_db
 
 # Contenedor de resultados
-outfile = 'biomass_IFN_2017_20180406.csv'
+outfile = 'biomass_IFN_2018_20180516.csv'
 #outfile = 'biomass_IFN_2017_20180402.csv'
-buffout = 'PlotID,Subparcela,Area_basal,Alvarez,Chave_I,Chave_II,Longitud,Latitud\n'
+buffout = 'PlotID,Subparcela,Area_basal,Alvarez,Alvarez_dh,Chave_II,Chave_II_dh,Longitud,Latitud\n'
 
-engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN'))
+engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
 
 #engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
 
