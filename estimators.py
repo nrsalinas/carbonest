@@ -134,7 +134,7 @@ class Estimator(object):
 		vartot = self.var_total(sv)
 		std_err = (vartot / self.dtfr.shape[0]) ** 0.5
 		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
-		poptot = sum(self.areas.values()) * mean
+		poptot = self.total(domain, variable) #sum(self.areas.values()) * mean
 		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
 		conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
 		out = {'Domain mean': mean,
@@ -158,7 +158,7 @@ class Estimator(object):
 		vartot = self.var_total(pv)
 		std_err = (vartot / self.dtfr.shape[0]) ** 0.5
 		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
-		poptot = sum(self.areas.values()) * mean
+		poptot = self.total(domain, variable) #sum(self.areas.values()) * mean
 		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
 		conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
 		out = {'Domain mean': mean,
@@ -210,7 +210,7 @@ class Estimator(object):
 		vartot = self.var_total(sv)
 		std_err = (vartot / self.dtfr.shape[0]) ** 0.5
 		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
-		poptot = sum(self.areas.values()) * mean
+		poptot = self.total(domain, variable) #sum(self.areas.values()) * mean
 		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
 		conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
 		out = {'Domain mean': mean,
@@ -259,7 +259,7 @@ class Estimator(object):
 		vartot = self.var_total(sv)
 		std_err = (vartot / self.dtfr.shape[0]) ** 0.5
 		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
-		poptot = sum(self.areas.values()) * mean
+		poptot = self.total(domain, variable) #sum(self.areas.values()) * mean
 		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
 		conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
 		out = {'Domain mean': mean,
@@ -451,10 +451,17 @@ class Estimator(object):
 				var_y_dict = self.stratified_mean_var(domain, var_y) 
 				var_x_dict = self.stratified_mean_var(domain_p, var_x)
 
-		var = (self.var_total(domain, var_y) + 
-				var_y_dict['Variance of the total'] +
-				self.ratio(domain, domain_p, var_y, var_x)**2 * var_x_dict['Variance of the total'] - 
-				2 * self.ratio(domain, domain_p, var_y, var_x) * cov) / self.total(domain_p, var_x)
+		R = self.ratio(domain, domain_p, var_y, var_x)
+		print var_x_dict['Population total']
 		
-		return None
+		var = (var_y_dict['Variance of the total'] +
+				R ** 2 * var_x_dict['Variance of the total'] - 
+				2 * R * cov) / var_x_dict['Population total'] ** 2
+		
+		stddev = var ** 0.5
+		rel_error = stddev / R * 100
+		
+		return {'Ratio': R,
+			'Variance of the ratio': var, 
+			'Relative error': rel_error}
 		
