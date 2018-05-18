@@ -7,7 +7,7 @@ from credentials import mysql_db
 
 # Contenedor de resultados
 outfile = 'biomass_IFN_2018_20180516.csv'
-#outfile = 'biomass_IFN_2017_20180402.csv'
+#outfile = 'biomass_IFN_2017_20180402.csv' 'Chave_II_d', 'Chave_II_dh', 'Alvarez_d', 'Alvarez_dh'
 buffout = 'PlotID,Subparcela,Area_basal,Alvarez,Alvarez_dh,Chave_II,Chave_II_dh,Longitud,Latitud\n'
 
 engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
@@ -37,15 +37,15 @@ forest_change = {'holdridge' : {'premontane_wet': 'lower_montane_wet',
 
 taxacc = db_utils.acctax(conn)
 
-#plots = pd.read_sql_table('Coordenadas', conn)
 
-query = "SELECT DiametroP AS Diameter, Tamano AS Size, AlturaTotal AS Height, Individuos.Plot as Plot, Subparcela AS Subplot, Taxon, Latitud, Longitud from Tallos LEFT JOIN Individuos ON IndividuoID = Individuo LEFT JOIN Coordenadas ON Coordenadas.Plot = Individuos.Plot LEFT JOIN Determinaciones ON Dets = DetID WHERE Tamano IN ('L', 'F', 'FG') AND Dets IS NOT NULL AND PetrProf IS NULL AND PetrGolpes IS NULL"
+query = "SELECT DiametroP AS Diameter, Tamano AS Size, AlturaTotal AS Height, Individuos.Plot as Plot, Subparcela AS Subplot, Taxon, Latitud, Longitud from Tallos LEFT JOIN Individuos ON IndividuoID = Individuo LEFT JOIN Determinaciones ON Dets = DetID WHERE Tamano IN ('L', 'F', 'FG') AND Dets IS NOT NULL AND PetrProf IS NULL AND PetrGolpes IS NULL"
 
 trees = pd.read_sql_query(query, conn)
 
-query = "SELECT Plot, SPF, Latitud, Longitud FROM Coordenadas"
+coors_or = pd.read_sql_table('Coordenadas', conn)
+coors = coors_or[['Plot','Latitud','Longitud']].groupby('Plot').mean().reset_index()
 
-coors = pd.read_sql_query(query, conn)
+trees = trees.merge(coors, how='left', on='Plot')
 
 trees['Family'] = np.nan
 
@@ -94,7 +94,7 @@ for plotid in trees.Plot.unique(): #[158621]:
 		#print myplot.E
 		myplot.densities_from_file(densities_file)
 
-		myplot.biomass(equations = ['Chave_II', 'Chave_I', 'Alvarez'])
+		myplot.biomass(equations = ['Chave_II_d', 'Chave_II_dh', 'Alvarez_d', 'Alvarez_dh'])
 		myplot.estimate_basal_area()
 		
 		#print myplot.chave_i

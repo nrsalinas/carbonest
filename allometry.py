@@ -654,3 +654,21 @@ def det_density(dens, diams, length, tilts = None):
 	dens_weighted = [d * (v / vol) for d,v in zip(dens, vols)]
 
 	return sum(dens_weighted)
+	
+	
+def fern(height):
+	"""
+	Estimates biomass (kg) of an arborescent fern from its height (m), following
+	the equation proposed by Tiepolo et al. 2002.
+	"""
+	agb = -4266348/(1 - (2792284 * np.exp(-0.313677*(height))))
+	return agb
+	
+	
+def palm(height):
+	"""
+	Estimates biomass (kg) of a palm from its height (m), following the equation
+	proposed by Zapata et al. 2003.
+	"""
+	agb = np.exp(0.360 + (1.218 * np.log(height)))
+	return agb

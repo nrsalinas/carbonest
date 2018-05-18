@@ -69,13 +69,16 @@ class Plot(object):
 			self.basal_area = None
 			self.basal_area_sps = {}
 
-			self.alvarez = 0.0 # Tons / ha
-			self.alvarez_sps = {}
-			self.chave_i = 0.0 # Tons / ha
+			self.alvarez_d = 0.0 # Tons / ha
+			self.alvarez_d_sps = {}
+			self.alvarez_dh = 0.0 # Tons / ha
+			self.alvarez_dh_sps = {}
+			self.chave_i_ = 0.0 # Tons / ha
 			self.chave_i_sps = {}
-			self.chave_ii = 0.0 # Tons / ha
-			self.chave_ii_sps = {}
-
+			self.chave_ii_d = 0.0 # Tons / ha
+			self.chave_ii_d_sps = {}
+			self.chave_ii_dh = 0.0 # Tons / ha
+			self.chave_ii_dh_sps = {}
 			# optional fields
 			fields = ['Diameter','Height','TaxonID']
 
@@ -83,11 +86,13 @@ class Plot(object):
 				fields.append('Subplot')
 				self.basal_area_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
 				#print self.basal_area_sps
-				self.alvarez_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				self.alvarez_d_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				self.alvarez_dh_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
 				#print self.alvarez_sps
 				self.chave_i_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
 				#print self.chave_i_sps
-				self.chave_ii_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				self.chave_ii_d_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
+				self.chave_ii_dh_sps = {c: 0.0 for c in dataframe.Subplot.unique()}
 				#print self.chave_ii_sps
 				self.coordinates_sps = {c: (None, None) for c in dataframe.Subplot.unique()}
 				#print self.coordinates_sps
@@ -309,7 +314,7 @@ class Plot(object):
 		return num
 
 
-	def biomass(self, method = 'deterministic', equations = ['Chave_II'], per_subplot = False):
+	def biomass(self, method = 'deterministic', equations = ['Chave_II_d'], per_subplot = False):
 		"""
 		Estimates biomass (ton/ha) from plant community data.
 
@@ -317,13 +322,29 @@ class Plot(object):
 
 		- method (string): Method to be employed in calculations.
 		"""
+		palmid = []
+		fernid = []
 		if self.det_stems() <= 0:
 			raise ValueError("No stems have density values available.")
-
+		
+		if 'Arecaceae' in self.taxa.Family.unique():	
+			palmid.append(self.taxa.loc[self.taxa.Family == 'Arecaceae', 'TaxonID'][0].item())
+		
+		if 'Cyatheaceae' in self.taxa.Family.unique():
+			fernid.append(self.taxa.loc[self.taxa.Family == 'Cyatheaceae', 'TaxonID'][0].item())
+		elif 'Dicksoniaceae' in self.taxa.Family.unique():
+			fernid.append(self.taxa.loc[self.taxa.Family == 'Dicksoniaceae', 'TaxonID'][0].item())
+		elif 'Metaxyaceae' in self.taxa.Family.unique():
+			fernid.append(self.taxa.loc[self.taxa.Family == 'Metaxyaceae', 'TaxonID'][0].item())
+		elif 'Cibotiaceae' in self.taxa.Family.unique():
+			fernid.append(self.taxa.loc[self.taxa.Family == 'Cibotiaceae', 'TaxonID'][0].item())
+			
 		if method == 'deterministic':
-			self.alvarez = 0.0 # Tons / ha
+			self.alvarez_d = 0.0 # Tons / ha
+			self.alvarez_dh = 0.0 # Tons / ha
 			self.chave_i = 0.0 # Tons / ha
-			self.chave_ii = 0.0 # Tons / ha
+			self.chave_ii_d = 0.0 # Tons / ha
+			self.chave_ii_dh = 0.0 # Tons / ha
 
 			for tree in self.stems.itertuples():
 
@@ -346,26 +367,53 @@ class Plot(object):
 					raise ValueError("Plot area has not been set.")
 
 				#try:
-				if 'Alvarez' in equations:
+				if 'Alvarez_d' in equations:
 					ta = allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
+					
 					if len(self.alvarez_sps) > 1:
-						self.alvarez_sps[tree.Subplot] += ta
+						self.alvarez_d_sps[tree.Subplot] += ta
 					else:
-						self.alvarez += ta
+						self.alvarez_d += ta
 
-				if 'Chave_II' in equations:
+				if 'Alvarez_dh' in equations:
+					if tree.TaxonID in palmid:
+						ta = allometry.palm(tree.Height) / area
+					elif tree.TaxonID in fernid:
+						ta = allometry.fern(tree.Height) / area
+					else:
+						ta = allometry.alvarez_dh(tree.Diameter, tree.Height, dens, self.holdridge) / area
+					
+					if len(self.alvarez_sps) > 1:
+						self.alvarez_dh_sps[tree.Subplot] += ta
+					else:
+						self.alvarez_dh += ta
+
+				if 'Chave_II_d' in equations:
 					ci = allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
 					if len(self.chave_ii_sps) > 1:
-						self.chave_ii_sps[tree.Subplot] += ci
+						self.chave_ii_d_sps[tree.Subplot] += ci
 					else:
-						self.chave_ii += ci
+						self.chave_ii_d += ci
+
+				if 'Chave_II_dh' in equations:
+					if tree.TaxonID in palmid:
+						cii = allometry.palm(tree.Height) / area
+					elif tree.TaxonID in fernid:
+						cii = allometry.fern(tree.Height) / area
+					else:
+						cii = allometry.chaveII_dh(tree.Diameter, tree.Height, dens) / area
+					
+					if len(self.chave_ii_sps) > 1:
+						self.chave_ii_dh_sps[tree.Subplot] += cii
+					else:
+						self.chave_ii_dh += cii
 
 				if 'Chave_I' in equations:
-					cii = allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
+					ci = allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
 					if len(self.chave_i_sps) > 1:
-						self.chave_i_sps[tree.Subplot] += cii
+						self.chave_i_sps[tree.Subplot] += ci
 					else:
-						self.chave_i += cii
+						self.chave_i += ci
 
 				"""
 				except:
@@ -374,10 +422,12 @@ class Plot(object):
 					else:
 						print "Plot: {0}, Stems row: {1}, TaxonID: {2}, Diameter: {3}, Density: {4}, E: {5}".format(self.name, tree.Index, tree.TaxonID, tree.Diameter, dens, self.E)
 				"""
-			if len(self.alvarez_sps) > 1:
-				self.alvarez = sum(self.alvarez_sps.values())
+			if len(self.alvarez_dh_sps) > 1:
+				self.alvarez_d = sum(self.alvarez_d_sps.values())
+				self.alvarez_dh = sum(self.alvarez_dh_sps.values())
 				self.chave_i = sum(self.chave_i_sps.values())
-				self.chave_ii = sum(self.chave_ii_sps.values())
+				self.chave_ii_d = sum(self.chave_ii_d_sps.values())
+				self.chave_ii_dh = sum(self.chave_ii_dh_sps.values())
 			
 		return None
 

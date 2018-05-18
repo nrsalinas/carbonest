@@ -18,7 +18,7 @@ TNRS_ID = None
 Tropicos_ID = None
 IPNI_ID = None
 bffrlog = ""
-logfile = "IFN_2018_tax_ver_20180516.txt"
+logfile = "IFN_2018_tax_ver_20180518.txt"
 
 def escape_quote(autor):
 	out = None
