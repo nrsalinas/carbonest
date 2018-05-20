@@ -328,7 +328,7 @@ class Plot(object):
 			raise ValueError("No stems have density values available.")
 		
 		if 'Arecaceae' in self.taxa.Family.unique():	
-			palmid.append(self.taxa.loc[self.taxa.Family == 'Arecaceae', 'TaxonID'][0].item())
+			palmid.append(self.taxa.loc[self.taxa.Family == 'Arecaceae', 'TaxonID'].iloc[0].item())
 		
 		if 'Cyatheaceae' in self.taxa.Family.unique():
 			fernid.append(self.taxa.loc[self.taxa.Family == 'Cyatheaceae', 'TaxonID'][0].item())
@@ -347,7 +347,7 @@ class Plot(object):
 			self.chave_ii_dh = 0.0 # Tons / ha
 
 			for tree in self.stems.itertuples():
-
+				
 				# Move this check to __init__
 				if tree.Diameter <= 0:
 					if u'StemID' in self.stems.columns:
@@ -367,15 +367,15 @@ class Plot(object):
 					raise ValueError("Plot area has not been set.")
 
 				#try:
-				if 'Alvarez_d' in equations:
+				if 'Alvarez_d' in equations and pd.notna(tree.Diameter):
 					ta = allometry.alvarez(tree.Diameter, dens, self.holdridge) / area
 					
-					if len(self.alvarez_sps) > 1:
+					if 'Subplot' in self.stems.columns:
 						self.alvarez_d_sps[tree.Subplot] += ta
 					else:
 						self.alvarez_d += ta
 
-				if 'Alvarez_dh' in equations:
+				if 'Alvarez_dh' in equations and pd.notna(tree.Diameter) and pd.notna(tree.Height):
 					if tree.TaxonID in palmid:
 						ta = allometry.palm(tree.Height) / area
 					elif tree.TaxonID in fernid:
@@ -383,19 +383,19 @@ class Plot(object):
 					else:
 						ta = allometry.alvarez_dh(tree.Diameter, tree.Height, dens, self.holdridge) / area
 					
-					if len(self.alvarez_sps) > 1:
+					if 'Subplot' in self.stems.columns:
 						self.alvarez_dh_sps[tree.Subplot] += ta
 					else:
 						self.alvarez_dh += ta
 
-				if 'Chave_II_d' in equations:
+				if 'Chave_II_d' in equations and pd.notna(tree.Diameter):
 					ci = allometry.chaveII(tree.Diameter, dens, e_value = float(self.E)) / area
-					if len(self.chave_ii_sps) > 1:
+					if 'Subplot' in self.stems.columns:
 						self.chave_ii_d_sps[tree.Subplot] += ci
 					else:
 						self.chave_ii_d += ci
 
-				if 'Chave_II_dh' in equations:
+				if 'Chave_II_dh' in equations and pd.notna(tree.Diameter) and pd.notna(tree.Height):
 					if tree.TaxonID in palmid:
 						cii = allometry.palm(tree.Height) / area
 					elif tree.TaxonID in fernid:
@@ -403,14 +403,14 @@ class Plot(object):
 					else:
 						cii = allometry.chaveII_dh(tree.Diameter, tree.Height, dens) / area
 					
-					if len(self.chave_ii_sps) > 1:
+					if 'Subplot' in self.stems.columns:
 						self.chave_ii_dh_sps[tree.Subplot] += cii
 					else:
 						self.chave_ii_dh += cii
 
-				if 'Chave_I' in equations:
+				if 'Chave_I' in equations and pd.notna(tree.Diameter):
 					ci = allometry.chaveI(tree.Diameter, dens, self.chave_forest) / area
-					if len(self.chave_i_sps) > 1:
+					if 'Subplot' in self.stems.columns:
 						self.chave_i_sps[tree.Subplot] += ci
 					else:
 						self.chave_i += ci
@@ -437,20 +437,20 @@ class Plot(object):
 		self.basal_area = 0.0
 		
 		for tree in self.stems.itertuples():
+			if pd.notna(tree.Diameter):
+				area = 0
+				if self.size_area:
+					area = self.size_area[tree.Size]
+				elif self.area:
+					area = self.area
+				else:
+					raise ValueError("Plot area has not been set.")
 
-			area = 0
-			if self.size_area:
-				area = self.size_area[tree.Size]
-			elif self.area:
-				area = self.area
-			else:
-				raise ValueError("Plot area has not been set.")
-
-			tba = (((tree.Diameter / 2.0) ** 2) * np.pi) / area
-			if len(self.basal_area_sps) > 1:
-				self.basal_area_sps[tree.Subplot] += tba
-			else:
-				self.basal_area += tba
+				tba = (((tree.Diameter / 2.0) ** 2) * np.pi) / area
+				if 'Subplot' in self.stems.columns:
+					self.basal_area_sps[tree.Subplot] += tba
+				else:
+					self.basal_area += tba
 
 		return None
 			

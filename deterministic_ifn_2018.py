@@ -6,9 +6,9 @@ import db_utils
 from credentials import mysql_db
 
 # Contenedor de resultados
-outfile = 'biomass_IFN_2018_20180516.csv'
+outfile = 'biomass_IFN_2018_20180518.csv'
 #outfile = 'biomass_IFN_2017_20180402.csv' 'Chave_II_d', 'Chave_II_dh', 'Alvarez_d', 'Alvarez_dh'
-buffout = 'PlotID,Subparcela,Area_basal,Alvarez,Alvarez_dh,Chave_II,Chave_II_dh,Longitud,Latitud\n'
+buffout = 'PlotID,Subparcela,Area_basal_cm2/ha,Alvarez_d_kg/ha,Alvarez_dh_kg/ha,Chave_II_d_kg/ha,Chave_II_dh_kg/ha,Longitud,Latitud\n'
 
 engine = al.create_engine( 'mysql+mysqldb://{0}:{1}@localhost/{2}?charset=utf8&use_unicode=1&unix_socket=/var/run/mysqld/mysqld.sock'.format(mysql_db['username'], mysql_db['password'], 'IFN_2018'))
 
@@ -38,7 +38,7 @@ forest_change = {'holdridge' : {'premontane_wet': 'lower_montane_wet',
 taxacc = db_utils.acctax(conn)
 
 
-query = "SELECT DiametroP AS Diameter, Tamano AS Size, AlturaTotal AS Height, Individuos.Plot as Plot, Subparcela AS Subplot, Taxon, Latitud, Longitud from Tallos LEFT JOIN Individuos ON IndividuoID = Individuo LEFT JOIN Determinaciones ON Dets = DetID WHERE Tamano IN ('L', 'F', 'FG') AND Dets IS NOT NULL AND PetrProf IS NULL AND PetrGolpes IS NULL"
+query = "SELECT DiametroP AS Diameter, Tamano AS Size, AlturaTotal AS Height, Individuos.Plot as Plot, Subparcela AS Subplot, Taxon from Tallos LEFT JOIN Individuos ON IndividuoID = Individuo LEFT JOIN Determinaciones ON Dets = DetID WHERE Tamano IN ('L', 'F', 'FG') AND Dets IS NOT NULL AND PetrProf IS NULL AND PetrGolpes IS NULL"
 
 trees = pd.read_sql_query(query, conn)
 
@@ -72,17 +72,18 @@ for plotid in trees.Plot.unique(): #[158621]:
 		size_area = siar, size_def = side)
 		myplot.name = plotid
 		fam, gen, spp = myplot.floristic_summary()
-		if fam == 0: # Todos los individuos de las parcela estan indeterminados
+		if fam == 0: # Todos los individuos de la parcela estan indeterminados
 			#print "Parcela {0} no fue analizada: No contiene ningun individuo determinado.".format(plotid)
 			continue
-		#print myplot.name
+		 
 		myplot.purify()
 		
 		myplot.coordinates = trees[trees.Plot == plotid]['Longitud'].iloc[0], trees[trees.Plot ==  plotid]['Latitud'].iloc[0]
 		
 		for sps in range(1,6):
-			myplot.coordinates_sps[sps] = coors[(coors['Plot'] == plotid) & (coors['SPF'] == sps)]['Longitud'].iloc[0], coors[(coors['Plot'] == plotid) & (coors['SPF'] == sps)]['Latitud'].iloc[0]
-					
+			#myplot.coordinates_sps[sps] = coors[(coors['Plot'] == plotid) & (coors['SPF'] == sps)]['Longitud'].iloc[0], coors[(coors['Plot'] == plotid) & (coors['SPF'] == sps)]['Latitud'].iloc[0]
+			myplot.coordinates_sps[sps] = coors_or[(coors_or['Plot'] == plotid) & (coors_or['SPF'] == sps)]['Longitud'].iloc[0], coors_or[(coors_or['Plot'] == plotid) & (coors_or['SPF'] == sps)]['Latitud'].iloc[0]
+			
 		myplot.set_holdridge(elevation_raster, precipitation_raster)
 
 		if myplot.holdridge in forest_change['holdridge']:
@@ -101,10 +102,8 @@ for plotid in trees.Plot.unique(): #[158621]:
 		#print '\n'
 		
 		for sps in myplot.basal_area_sps:
-			buffout += "{0},{1},{2},{3},{4},{5},{6},{7}\n".format(myplot.name, sps, myplot.basal_area_sps[sps], myplot.alvarez_sps[sps], myplot.chave_i_sps[sps], myplot.chave_ii_sps[sps], myplot.coordinates_sps[sps][0], myplot.coordinates_sps[sps][1])
+			buffout += "{0},{1},{2},{3},{4},{5},{6},{7},{8}\n".format(myplot.name, sps, myplot.basal_area_sps[sps], myplot.alvarez_d_sps[sps], myplot.alvarez_dh_sps[sps], myplot.chave_ii_d_sps[sps], myplot.chave_ii_dh_sps[sps], myplot.coordinates_sps[sps][0], myplot.coordinates_sps[sps][1])
 		
-		#buffout += "{0},{1},{2},{3},{4},{5},{6}\n".format(myplot.name, myplot.basal_area, myplot.alvarez, myplot.chave_i, myplot.chave_ii, myplot.coordinates[0], myplot.coordinates[1])
-
 with open(outfile, 'w') as fhandle:
 	fhandle.write(buffout)
 
