@@ -672,3 +672,24 @@ def palm(height):
 	"""
 	agb = np.exp(0.360 + (1.218 * np.log(height)))
 	return agb
+	
+	
+def imani(diameter, elevation):
+	"""
+	Estimates tree height using the allometric equations proposed by Imani et al.
+	2017 Plos One 12(6): e0179653.
+	"""
+	height = None
+	if 1250 <= elevation < 1500:
+		height = 30.61 * np.exp(-2.7 * np.exp(-0.95 * diameter))
+		
+	elif 1500 <= elevation < 1800:
+		height = 30.0 * np.exp(-3.2 * np.exp(-0.94 * diameter))
+		
+	elif 1800 <= elevation < 2400:
+		height = 22.7 - 24.41 * np.exp(-np.exp(-3.3) * diameter)
+		
+	elif 2400 <= elevation < 2600:
+		height = -15.26 + 11.57 * np.log(diameter) - 1.17 * np.log(diameter) ** 2
+
+	return height
