@@ -452,7 +452,7 @@ class Estimator(object):
 				var_x_dict = self.stratified_mean_var(domain_p, var_x)
 
 		R = self.ratio(domain, domain_p, var_y, var_x)
-		print var_x_dict['Population total']
+		#print var_x_dict['Population total']
 		
 		var = (var_y_dict['Variance of the total'] +
 				R ** 2 * var_x_dict['Variance of the total'] - 
