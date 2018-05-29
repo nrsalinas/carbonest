@@ -460,8 +460,27 @@ class Estimator(object):
 		
 		stddev = var ** 0.5
 		rel_error = stddev / R * 100
+
+		# Confidence interval via Fieller's method
+		Y = var_y_dict['Population total']
+		X = var_x_dict['Population total']
+		vY = var_y_dict['Variance of the total']
+		vX = var_x_dict['Variance of the total']
+		t_val = t.ppf(0.95, self.dtfr.shape[0] - 1)
+		#print Y, X, vY, vX, t_val
+		
+		A = X * Y - t_val**2 * cov
+		B = X**2 - t_val**2 * vX
+		C = Y**2 - t_val**2 * vY
+		#print A, B, C
+		
+		alpha0 = (A - (A**2 - B * C)**0.5) / B
+
+		alpha1 = (A + (A**2 - B * C)**0.5) / B
+
 		
 		return {'Ratio': R,
+			'Confidence interval': (alpha0, alpha1),
 			'Variance of the ratio': var, 
 			'Relative error': rel_error}
 		
