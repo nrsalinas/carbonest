@@ -40,7 +40,10 @@ areas = {'Amazonia: Bosque': 39927789,
 class Estimator(object):
 	
 	def __init__(self, dtfr, areas, weights):
-		
+		"""
+		Dataframe mandatory columns: `Plot`, `Subplot`, `Stratum`, `Area`, and 
+		`Domain`.
+		"""
 		if isinstance(dtfr, DataFrame):
 			self.dtfr = dtfr
 		
@@ -75,11 +78,8 @@ class Estimator(object):
 	def total(self, domain, variable):
 		tot = 0.0
 		for h in self.dtfr.Stratum.unique():
-			#print "\n",h
 			str_mean = self.stratum_mean(h, domain, variable)
-			#print str_mean
 			tot += str_mean * self.areas[h]
-			#print str_mean * self.areas[h]
 		return tot
 		
 	
@@ -97,6 +97,7 @@ class Estimator(object):
 			
 		for h in self.dtfr.Stratum.unique():
 
+			# Sample size in stratum h
 			n_h = float(len(self.dtfr.loc[self.dtfr.Stratum == h, 'Plot'].unique()))
 			#n_h = float(self.dtfr[self.dtfr.Stratum == h].shape[0])
 			
@@ -131,17 +132,13 @@ class Estimator(object):
 		self.get_strata_var(domain, variable)
 			
 		for h in self.s2:
-			#sv[h] = (self.weights[h] ** 2 * self.s2[h]) / self.dtfr[self.dtfr.Stratum == h].shape[0]
 			sv[h] = (self.weights[h] ** 2 * self.s2[h]) / len(self.dtfr.loc[self.dtfr.Stratum == h, 'Plot'].unique())
 			
 		vartot = self.var_total(sv)
-		#std_err = (vartot / self.dtfr.shape[0]) ** 0.5
 		std_err = (vartot / len(self.dtfr.Plot.unique())) ** 0.5
-		#mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(self.dtfr.shape[0])
 		mean = self.dtfr.loc[self.dtfr.Domain == domain, variable].sum() / float(len(self.dtfr.Plot.unique()))
 		poptot = self.total(domain, variable)
 		rel_error = vartot ** 0.5 / self.total(domain, variable) * 100
-		#conf_inter = t.interval(confidence, self.dtfr.shape[0] - 1, poptot, std_err) 
 		conf_inter = t.interval(confidence, len(self.dtfr.Plot.unique()) - 1, poptot, std_err) 
 		out = {'Domain mean': mean,
 			'Population total': poptot,
@@ -353,15 +350,15 @@ class Estimator(object):
 		tcov = 0.0
 		for h in self.weights:
 			if self.dtfr[self.dtfr.Stratum == h].shape[0] > 0:
-				#tcov_h = (1 / float(self.dtfr.shape[0])) * ((self.weights[h] * self.covs[h]) + ((1 - self.weights[h]) * self.covs[h] / float(self.dtfr.shape[0])))
-				tcov_h = (1 / float(self.dtfr.shape[0])) * ((self.weights[h] * self.covs[h]) + ((1 - self.weights[h]) * self.covs[h] / float(len(self.dtfr.Plot.unique()))))
+				
+				tcov_h = ((self.weights[h] * self.covs[h]) + ((1 - self.weights[h]) * self.covs[h] / float(len(self.dtfr.Plot.unique()))))
 			else:
 				tcov_h = 0.0
 				
 			tcov += tcov_h
 			
 		# In Chip's formula the sum of the areas is not exponentiated
-		tcov *= sum(self.areas.values()) ** 2
+		tcov *= sum(self.areas.values()) ** 2 / float(len(self.dtfr.Plot.unique())) 
 		
 		return tcov
 		
@@ -376,7 +373,8 @@ class Estimator(object):
 		
 		for h in self.weights:
 			if self.dtfr[self.dtfr.Stratum == h].shape[0] > 0:
-				n_h = float(self.dtfr[self.dtfr.Stratum == h].shape[0])
+				#n_h = float(self.dtfr[self.dtfr.Stratum == h].shape[0])
+				n_h = float(len(self.dtfr.loc[self.dtfr.Stratum == h, 'Plot'].unique()))
 				
 				sum_y = 0.0
 				if self.dtfr[(self.dtfr.Stratum == h) & (self.dtfr.Domain == domain)].shape[0] > 0:
@@ -412,7 +410,8 @@ class Estimator(object):
 		
 		for h in self.weights:
 			if self.dtfr[self.dtfr.Stratum == h].shape[0] > 0:
-				n_h = float(self.dtfr[self.dtfr.Stratum == h].shape[0])
+				#n_h = float(self.dtfr[self.dtfr.Stratum == h].shape[0])
+				n_h = float(len(self.dtfr.loc[self.dtfr.Stratum == h, 'Plot'].unique()))
 				
 				sum_y = 0.0
 				if self.dtfr[(self.dtfr.Stratum == h) & (self.dtfr.Domain == domain)].shape[0] > 0:
@@ -426,8 +425,8 @@ class Estimator(object):
 					sum_x = self.dtfr.loc[(self.dtfr.Stratum == h) & (self.dtfr.Domain == domain_p), var_x].sum()
 					
 				mean_hx = sum_x / sum_a
-				l = (self.map_points[h] - 1) / (tot_points - 1) * self.covs[h] / float(self.dtfr.shape[0])
-				c = (1 - self.weights[h]) *  self.covs[h] / float(self.dtfr.shape[0]) ** 2
+				l = (self.map_points[h] - 1) / (tot_points - 1) * self.covs[h] / float(len(self.dtfr.Plot.unique()))
+				c = (1 - self.weights[h]) *  self.covs[h] / float(len(self.dtfr.Plot.unique())) ** 2
 				r = 1 / (tot_points - 1) * self.weights[h] * (mean_hy - mean_y) * (mean_hx - mean_x)
 				tcov_h = l + c + r
 
@@ -441,7 +440,7 @@ class Estimator(object):
 		return tcov
 		
 	
-	def ratio_var(self, domain, domain_p, var_y, var_x, double_sampl = False, post_strat = False):
+	def ratio_var(self, domain, domain_p, var_y, var_x, double_sampl = False, post_strat = True):
 		cov = None
 		var_y_dict = None 
 		var_x_dict = None
