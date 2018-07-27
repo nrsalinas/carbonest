@@ -28,54 +28,43 @@ def fornofor(longitude, latitude, raster):
 	raster = Forest/no-forest raster file path.
 	"""
 	out = None
+	val = None
 	radius = 0
 
 	if raster_api == "gdal":
-		while out is None:
-			alt = []
-			myras = gdal.Open(raster)
-			transform = myras.GetGeoTransform()
-			xOrigin = transform[0]
-			yOrigin = transform[3]
-			pixelWidth = transform[1]
-			pixelHeight = transform[5]
-			px = int((longitude - xOrigin) / pixelWidth) #x pixel
-			py = int((latitude - yOrigin) / pixelHeight) #y pixel
-			pxs = [px-radius, px+radius]
-			pys = [py-radius, py+radius]
-			for npx in pxs:
-				for npy in pys:
-					if npx > 0 and npy > 0 and npx <= myras.RasterXSize and npy <= myras.RasterYSize:
-						intval = myras.ReadAsArray(npx,npy,1,1)
-						if intval[0][0] > -100:
-							alt.append(intval[0][0])
-			alt = filter(lambda w: abs(w) != np.inf, alt)
-			if len(alt):
-				out = sum(alt) / float(len(alt))
-			radius += 1
+		myras = gdal.Open(raster)
+		transform = myras.GetGeoTransform()
+		xOrigin = transform[0]
+		yOrigin = transform[3]
+		pixelWidth = transform[1]
+		pixelHeight = transform[5]
+		px = int((longitude - xOrigin) / pixelWidth) #x pixel
+		py = int((latitude - yOrigin) / pixelHeight) #y pixel
+		val = myras.ReadAsArray(px,py,1,1).flatten()[0]
 
 	elif raster_api == "rasterio":
-		while out is None:
-			alt = []
-			myras = rasterio.open(raster)
-			transform = myras.transform
-			pixelsX = myras.height
-			pixelsY = myras.width
-			xOrigin = transform[0]
-			yOrigin = transform[3]
-			pixelWidth = transform[1]
-			pixelHeight = transform[5]
-			px = int((longitude - xOrigin) / pixelWidth) #x pixel
-			py = int((latitude - yOrigin) / pixelHeight) #y pixel
-			pxs = (px-radius, px+radius+1)
-			pys = (py-radius, py+radius+1)
-			alts = myras.read(1, window=(pxs, pys)).flatten()
-			alts = alts[np.where((alts > -100) & (abs(alts) != np.inf))]
-			if alts.shape[0] > 0:
-				out = alts.mean()
-			radius += 1
+		myras = rasterio.open(raster)
+		transform = myras.transform
+		pixelsX = myras.height
+		pixelsY = myras.width
+		xOrigin = transform[0]
+		yOrigin = transform[3]
+		pixelWidth = transform[1]
+		pixelHeight = transform[5]
+		px = int((longitude - xOrigin) / pixelWidth) #x pixel
+		py = int((latitude - yOrigin) / pixelHeight) #y pixel
+		val = myras.read(1, window=((py, py+1), (px, px+1))).flatten()[0]
+		#print val
+
 	else:
 		pass
+		
+	if val == 1:
+		out = 'Bosque'
+	elif val == 2:
+		out = 'No-bosque'
+	elif val == 3:
+		out = 'SI'
 
 	return out
 
