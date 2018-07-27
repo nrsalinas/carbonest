@@ -3,27 +3,34 @@ import os
 
 np.seterr(over='raise')
 
-GDAL = 0
+raster_api = None
 try:
-	import gdal
-	GDAL = 1
-except ImportError as e:
-	if e.message == "No module named gdal":
-		print "Warning: functions based on data from raster files will not be available. "
-	else:
-		#raise
-		pass
+	import rasterio
+	raster_api = "rasterio"
+
+except ImportError:
+	try:
+		import gdal
+		raster_api = "gdal"
+
+	except ImportError:
+		print "Warning: No SIG library found, raster files will not read."
+
+	except:
+		raise
+
 except:
 	raise
 
 
-def altitude(longitude, latitude, raster):
+def fornofor(longitude, latitude, raster):
 	"""
-	rasters = Iterable of raster file paths where the location maybe be found.
+	raster = Forest/no-forest raster file path.
 	"""
 	out = None
 	radius = 0
-	if GDAL:
+
+	if raster_api == "gdal":
 		while out is None:
 			alt = []
 			myras = gdal.Open(raster)
@@ -46,6 +53,86 @@ def altitude(longitude, latitude, raster):
 			if len(alt):
 				out = sum(alt) / float(len(alt))
 			radius += 1
+
+	elif raster_api == "rasterio":
+		while out is None:
+			alt = []
+			myras = rasterio.open(raster)
+			transform = myras.transform
+			pixelsX = myras.height
+			pixelsY = myras.width
+			xOrigin = transform[0]
+			yOrigin = transform[3]
+			pixelWidth = transform[1]
+			pixelHeight = transform[5]
+			px = int((longitude - xOrigin) / pixelWidth) #x pixel
+			py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			pxs = (px-radius, px+radius+1)
+			pys = (py-radius, py+radius+1)
+			alts = myras.read(1, window=(pxs, pys)).flatten()
+			alts = alts[np.where((alts > -100) & (abs(alts) != np.inf))]
+			if alts.shape[0] > 0:
+				out = alts.mean()
+			radius += 1
+	else:
+		pass
+
+	return out
+
+
+def altitude(longitude, latitude, raster):
+	"""
+	rasters = Raster file path.
+	"""
+	out = None
+	radius = 0
+
+	if raster_api == "gdal":
+		while out is None:
+			alt = []
+			myras = gdal.Open(raster)
+			transform = myras.GetGeoTransform()
+			xOrigin = transform[0]
+			yOrigin = transform[3]
+			pixelWidth = transform[1]
+			pixelHeight = transform[5]
+			px = int((longitude - xOrigin) / pixelWidth) #x pixel
+			py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			pxs = [px-radius, px+radius]
+			pys = [py-radius, py+radius]
+			for npx in pxs:
+				for npy in pys:
+					if npx > 0 and npy > 0 and npx <= myras.RasterXSize and npy <= myras.RasterYSize:
+						intval = myras.ReadAsArray(npx,npy,1,1)
+						if intval[0][0] > -100:
+							alt.append(intval[0][0])
+			alt = filter(lambda w: abs(w) != np.inf, alt)
+			if len(alt):
+				out = sum(alt) / float(len(alt))
+			radius += 1
+
+	elif raster_api == "rasterio":
+		while out is None:
+			alt = []
+			myras = rasterio.open(raster)
+			transform = myras.transform
+			pixelsX = myras.height
+			pixelsY = myras.width
+			xOrigin = transform[0]
+			yOrigin = transform[3]
+			pixelWidth = transform[1]
+			pixelHeight = transform[5]
+			px = int((longitude - xOrigin) / pixelWidth) #x pixel
+			py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			pxs = (px-radius, px+radius+1)
+			pys = (py-radius, py+radius+1)
+			alts = myras.read(1, window=(pxs, pys)).flatten()
+			alts = alts[np.where((alts > -100) & (abs(alts) != np.inf))]
+			if alts.shape[0] > 0:
+				out = alts.mean()
+			radius += 1
+	else:
+		pass
 
 	return out
 
@@ -406,7 +493,7 @@ def chaveI_original(diameter, density, forest_type):
 def alvarez_dh(diameter, height, density, forest_type):
 	"""
 	Estimates tree biomass (Kg) through the allometric equations type I.1
-	proposed by Alvarez et al. 2012, Forest Ecology and Managament 267: 297-308. 
+	proposed by Alvarez et al. 2012, Forest Ecology and Managament 267: 297-308.
 	Returns a float.
 
 	Arguments:
@@ -585,7 +672,7 @@ def chaveII_dh(diameter, height, density):
 	- density (float): Wood density (gr/cm^3).
 
 	"""
-	
+
 	AGB = 0.06311 * (density * height * diameter ** 2) ** 0.9759
 	return AGB
 
@@ -654,8 +741,8 @@ def det_density(dens, diams, length, tilts = None):
 	dens_weighted = [d * (v / vol) for d,v in zip(dens, vols)]
 
 	return sum(dens_weighted)
-	
-	
+
+
 def fern(height):
 	"""
 	Estimates biomass (kg) of an arborescent fern from its height (m), following
@@ -663,8 +750,8 @@ def fern(height):
 	"""
 	agb = -4266348/(1 - (2792284 * np.exp(-0.313677*(height))))
 	return agb
-	
-	
+
+
 def palm(height):
 	"""
 	Estimates biomass (kg) of a palm from its height (m), following the equation
@@ -672,8 +759,8 @@ def palm(height):
 	"""
 	agb = np.exp(0.360 + (1.218 * np.log(height)))
 	return agb
-	
-	
+
+
 def imani(diameter, elevation):
 	"""
 	Estimates tree height using the allometric equations proposed by Imani et al.
@@ -682,13 +769,13 @@ def imani(diameter, elevation):
 	height = None
 	if 1250 <= elevation < 1500:
 		height = 30.61 * np.exp(-2.7 * np.exp(-0.95 * diameter))
-		
+
 	elif 1500 <= elevation < 1800:
 		height = 30.0 * np.exp(-3.2 * np.exp(-0.94 * diameter))
-		
+
 	elif 1800 <= elevation < 2400:
 		height = 22.7 - 24.41 * np.exp(-np.exp(-3.3) * diameter)
-		
+
 	elif 2400 <= elevation < 2600:
 		height = -15.26 + 11.57 * np.log(diameter) - 1.17 * np.log(diameter) ** 2
 
