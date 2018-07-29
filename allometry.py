@@ -637,7 +637,7 @@ def chaveII(diameter, density, longitude = None, latitude = None, raster_file = 
 
 	"""
 	AGB = None
-	if GDAL and longitude and latitude and raster_file and e_value is None:
+	if raster_api == "gdal" and longitude and latitude and raster_file and e_value is None:
 		e_value = getE(longitude, latitude, raster_file)
 
 	if isinstance(e_value, float) or isinstance(e_value, int):
