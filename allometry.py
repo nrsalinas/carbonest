@@ -318,7 +318,7 @@ def getE(longitude, latitude, raster_file):
 			py = int((latitude - yOrigin) / pixelHeight) #y pixel
 			pxs = (px-radius, px+radius+1)
 			pys = (py-radius, py+radius+1)
-			ee = E_raster.read(1, window=(pxs, pys)).flatten()
+			ee = E_raster.read(1, window=(pys, pxs)).flatten()
 			ee = ee[np.where((ee > min_value) & (abs(ee) != np.inf))]
 			if ee.shape[0] > 0:
 				out = ee.mean()
