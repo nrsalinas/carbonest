@@ -102,11 +102,13 @@ def altitude(longitude, latitude, raster):
 
 	elif raster_api == "rasterio":
 		while out is None:
-			alt = []
+			alt = np.array([])
 			myras = rasterio.open(raster)
 			transform = myras.transform
 			pixelsX = myras.height
+			#print 'pixelsX', pixelsX
 			pixelsY = myras.width
+			#print 'pixelsY', pixelsY
 			xOrigin = transform[0]
 			yOrigin = transform[3]
 			pixelWidth = transform[1]
@@ -115,7 +117,10 @@ def altitude(longitude, latitude, raster):
 			py = int((latitude - yOrigin) / pixelHeight) #y pixel
 			pxs = (px-radius, px+radius+1)
 			pys = (py-radius, py+radius+1)
+			#print 'pxs', pxs
+			#print 'pys', pys
 			alts = myras.read(1, window=(pxs, pys)).flatten()
+			#print alts
 			alts = alts[np.where((alts > -100) & (abs(alts) != np.inf))]
 			if alts.shape[0] > 0:
 				out = alts.mean()
@@ -126,45 +131,6 @@ def altitude(longitude, latitude, raster):
 	return out
 
 
-def precipitation_old(longitude, latitude, raster_files):
-	"""
-	Estimates yearly aggregated precipitation from monthly data.
-
-	- raster_files (str): Path to raster files of monthly precipitation. Should
-	follow WorldClim v2 filename standard (*.tif).
-	"""
-	out = None
-	radius = 0
-	if GDAL:
-		out = -1
-		while out < 0:
-			month_prec = []
-			for myfile in os.listdir(raster_files):
-				if myfile.endswith('.tif') or myfile.endswith('.bil'):
-					prec_raster = gdal.Open(raster_files + '/' + myfile)
-					transform = prec_raster.GetGeoTransform()
-					xOrigin = transform[0]
-					yOrigin = transform[3]
-					pixelWidth = transform[1]
-					pixelHeight = transform[5]
-					prec_band = prec_raster.GetRasterBand(1)
-					px = int((longitude - xOrigin) / pixelWidth) #x pixel
-					py = int((latitude - yOrigin) / pixelHeight) #y pixel
-					pxs = [px-radius, px+radius]
-					pys = [py-radius, py+radius]
-					for npx in pxs:
-						for npy in pys:
-							intval = prec_band.ReadAsArray(npx,npy,1,1)
-							if intval[0][0] > 0:
-								month_prec.append(intval[0][0])
-
-			if len(month_prec):
-				out = (sum(month_prec) / float(len(month_prec))) * 12
-
-			radius += 1
-
-	return out
-
 def precipitation(longitude, latitude, raster_file):
 	"""
 	Estimates yearly aggregated precipitation from monthly data.
@@ -174,7 +140,7 @@ def precipitation(longitude, latitude, raster_file):
 	"""
 	out = None
 	radius = 0
-	if GDAL:
+	if raster_api == "gdal":
 		out = -1
 		while out < 0:
 			prec = []
@@ -199,6 +165,28 @@ def precipitation(longitude, latitude, raster_file):
 				prec = filter(lambda w: abs(w) != np.inf, prec)
 			if len(prec):
 				out = sum(prec) / float(len(prec))
+
+			radius += 1
+			
+	if raster_api == "rasterio":
+		out = -1
+		while out < 0:
+			prec = []
+			if raster_file.endswith('.tif') or raster_file.endswith('.bil'):
+				prec_raster = rasterio.open(raster_file)
+				transform = prec_raster.transform
+				xOrigin = transform[0]
+				yOrigin = transform[3]
+				pixelWidth = transform[1]
+				pixelHeight = transform[5]
+				px = int((longitude - xOrigin) / pixelWidth) #x pixel
+				py = int((latitude - yOrigin) / pixelHeight) #y pixel
+				pxs = (px-radius, px+radius+1)
+				pys = (py-radius, py+radius+1)
+				prec = prec_raster.read(1, window=(pxs, pys)).flatten()
+				prec = prec[np.where((prec > -10) & (abs(prec) != np.inf))]
+				if prec.shape[0] > 0:
+					out = prec.mean()
 
 			radius += 1
 
@@ -287,8 +275,9 @@ def getE(longitude, latitude, raster_file):
 	"""
 	out = None
 	min_value = -10.0
+	radius = 0
 
-	if GDAL:
+	if raster_api == "gdal":
 		E_raster = gdal.Open(raster_file)
 		transform = E_raster.GetGeoTransform()
 		xOrigin = transform[0]
@@ -315,6 +304,26 @@ def getE(longitude, latitude, raster_file):
 			if len(newee):
 				out = sum(newee) / len(newee)
 			rad += 1
+			
+	elif raster_api == "rasterio":
+		while out is None:
+			ee = []
+			E_raster = rasterio.open(raster_file)
+			transform = E_raster.transform
+			xOrigin = transform[0]
+			yOrigin = transform[3]
+			pixelWidth = transform[1]
+			pixelHeight = transform[5]
+			px = int((longitude - xOrigin) / pixelWidth) #x pixel
+			py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			pxs = (px-radius, px+radius+1)
+			pys = (py-radius, py+radius+1)
+			ee = E_raster.read(1, window=(pxs, pys)).flatten()
+			ee = ee[np.where((ee > min_value) & (abs(ee) != np.inf))]
+			if ee.shape[0] > 0:
+				out = ee.mean()
+			radius += 1
+				
 
 	else:
 		print "Function getE is not available: requires package gdal."
