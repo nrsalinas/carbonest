@@ -119,7 +119,7 @@ def altitude(longitude, latitude, raster):
 			pys = (py-radius, py+radius+1)
 			#print 'pxs', pxs
 			#print 'pys', pys
-			alts = myras.read(1, window=(pxs, pys)).flatten()
+			alts = myras.read(1, window=(pys, pxs)).flatten()
 			#print alts
 			alts = alts[np.where((alts > -100) & (abs(alts) != np.inf))]
 			if alts.shape[0] > 0:
@@ -183,7 +183,7 @@ def precipitation(longitude, latitude, raster_file):
 				py = int((latitude - yOrigin) / pixelHeight) #y pixel
 				pxs = (px-radius, px+radius+1)
 				pys = (py-radius, py+radius+1)
-				prec = prec_raster.read(1, window=(pxs, pys)).flatten()
+				prec = prec_raster.read(1, window=(pys, pxs)).flatten()
 				prec = prec[np.where((prec > -10) & (abs(prec) != np.inf))]
 				if prec.shape[0] > 0:
 					out = prec.mean()
