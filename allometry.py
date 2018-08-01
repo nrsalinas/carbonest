@@ -753,7 +753,7 @@ def fern(height):
 def palm(height):
 	"""
 	Estimates biomass (kg) of a palm from its height (m), following the equation
-	proposed by Zapata et al. 2003.
+	proposed by Sierra et al. 2007 Forest Ecology and Management 243: 299-309.
 	"""
 	agb = np.exp(0.360 + (1.218 * np.log(height)))
 	return agb
