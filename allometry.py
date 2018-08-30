@@ -58,7 +58,7 @@ def fornofor(longitude, latitude, raster):
 
 	else:
 		pass
-		
+
 	if val == 1:
 		out = 'Bosque'
 	elif val == 2:
@@ -167,7 +167,7 @@ def precipitation(longitude, latitude, raster_file):
 				out = sum(prec) / float(len(prec))
 
 			radius += 1
-			
+
 	if raster_api == "rasterio":
 		out = -1
 		while out < 0:
@@ -304,7 +304,7 @@ def getE(longitude, latitude, raster_file):
 			if len(newee):
 				out = sum(newee) / len(newee)
 			rad += 1
-			
+
 	elif raster_api == "rasterio":
 		while out is None:
 			ee = []
@@ -323,7 +323,7 @@ def getE(longitude, latitude, raster_file):
 			if ee.shape[0] > 0:
 				out = ee.mean()
 			radius += 1
-				
+
 
 	else:
 		print "Function getE is not available: requires package gdal."
@@ -778,3 +778,33 @@ def imani(diameter, elevation):
 		height = -15.26 + 11.57 * np.log(diameter) - 1.17 * np.log(diameter) ** 2
 
 	return height
+
+
+def ali(diameter, density = None, height = None):
+	"""
+	Estimates Above Ground Biomass (kg) of shrubs and small trees, according to
+	the equation 1.b proposed by Ali et al., 2015, Silva Fennica 49 (4). Equation
+	DBH range: 0.4--4.9 cm.
+
+	Arguments:
+
+	- diameter (float): Plant diameter at breast height of the longest stem (cm).
+
+	- density (float): Wood density (gr/ml).
+
+	- height (float): Plant total height (m).
+	"""
+	out = None
+	if height:
+		if density:
+			out = np.exp(-5.4 + 1.65 * np.log(diameter) + 0.885 * np.log(height) + 3.31 * density)
+		else:
+			out = np.exp(-3.5 + 1.65 * np.log(diameter) + 0.842 * np.log(height))
+
+	else:
+		if density:
+			out = np.exp(-4.97 + 2.20 * np.log(diameter) + 3.06 * density)
+		else:
+			out = np.exp(-3.23 + 2.17 * np.log(diameter))
+
+	return out
