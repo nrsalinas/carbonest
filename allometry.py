@@ -744,16 +744,26 @@ def det_density(dens, diams, length, tilts = None):
 def fern(height):
 	"""
 	Estimates biomass (kg) of an arborescent fern from its height (m), following
-	the equation proposed by Tiepolo et al. 2002.
+	the equation proposed by Tiepolo et al. 2002. Equation height range: 1-8 m.
 	"""
 	agb = -4266348/(1 - (2792284 * np.exp(-0.313677*(height))))
 	return agb
 
 
-def palm(height):
+def palm_tiepolo(height):
+	"""
+	Estimates biomass (kg) of a palm from its height (m), following the equation
+	proposed by Tiepolo et al. 2002. Equation height range: 1-33 m.
+	"""
+	agb = 0.3999 + 7.907 * height
+	return agb
+
+
+def palm_sierra(height):
 	"""
 	Estimates biomass (kg) of a palm from its height (m), following the equation
 	proposed by Sierra et al. 2007 Forest Ecology and Management 243: 299-309.
+	Equation height range: 1-1.5 m.
 	"""
 	agb = np.exp(0.360 + (1.218 * np.log(height)))
 	return agb
