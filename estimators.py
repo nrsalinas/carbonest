@@ -91,6 +91,24 @@ class Estimator(object):
 		return self.total(domain, var_y) / self.total(domain_p, var_x)
 		
 
+	def strata_ratios(self, domain, domain_p, var_y, var_x):
+		out = {}
+		
+		for h in self.areas:
+			
+			if self.dtfr[(self.dtfr.Stratum == h) & (self.dtfr.Domain == domain)].shape[0] > 0 and self.dtfr[(self.dtfr.Stratum == h) & (self.dtfr.Domain == domain_p)].shape[0] > 0:
+			
+				y = self.stratum_mean(h, domain, var_y) * self.areas[h]
+				x = self.stratum_mean(h, domain_p, var_x) * self.areas[h]
+				
+				out[h] = y / x
+				
+			else:
+				out[h] = 0
+				
+		return out
+		
+
 	def var_total(self, var_dict):
 		return sum(self.areas.values()) ** 2 * sum(var_dict.values())
 
@@ -170,6 +188,7 @@ class Estimator(object):
 	def post_stratified_mean_var(self, domain, variable, confidence = 0.95):
 		#print ">>> In post_stratified_mean_var <<<"
 		pv = {}
+		pt = {}
 		#print domain, variable
 		self.get_strata_var(domain, variable)
 		
@@ -178,6 +197,7 @@ class Estimator(object):
 			pv[h] = self.weights[h] * self.s2[h] 
 			pv[h] += ((1 - self.weights[h]) * self.s2[h]) / len(self.dtfr.Plot.unique())
 			pv[h] /= len(self.dtfr.Plot.unique())
+			pt[h] = self.stratum_mean(h, domain, variable) * self.areas[h]
 
 		vartot = self.var_total(pv)
 		std_err = (vartot / len(self.dtfr.Plot.unique())) ** 0.5
@@ -187,7 +207,8 @@ class Estimator(object):
 		conf_inter = t.interval(confidence, len(self.dtfr.Plot.unique()) - 1, poptot, std_err) 
 		out = {'Domain mean': mean,
 			'Population total': poptot,
-			'Strata variances': pv, 
+			'Strata variances': pv,
+			'Strata totals': pt,
 			'Variance of the total': vartot, 
 			'Relative error': rel_error,
 			'Confidence interval': conf_inter}
@@ -201,6 +222,7 @@ class Estimator(object):
 		
 		N = float(sum(self.map_points.values()))
 		sv = {}
+		sm = {}
 		left = 0.0
 		right = 0.0
 		
@@ -220,7 +242,6 @@ class Estimator(object):
 			right = self.weights[h] * (mean - str_mean) ** 2
 					
 			if self.map_points[h] > 0:
-		
 				
 				left = self.weights[h] * self.s2[h] * float(self.map_points[h] - 1) \
 					/ (float(self.dtfr[self.dtfr.Stratum == h].shape[0]) * (N - 1))
@@ -460,6 +481,7 @@ class Estimator(object):
 		cov = None
 		var_y_dict = None 
 		var_x_dict = None
+		str_ratios = self.strata_ratios(domain, domain_p, var_y, var_x)
 		
 		if double_sampl:
 			if post_strat:
@@ -485,6 +507,8 @@ class Estimator(object):
 		#print var_x_dict
 		#print "var_y_dict"
 		#print var_y_dict
+		
+		
 		
 		var = (var_y_dict['Variance of the total'] +
 				R ** 2 * var_x_dict['Variance of the total'] - 
@@ -514,5 +538,6 @@ class Estimator(object):
 		return {'Ratio': R,
 			'Confidence interval': (alpha0, alpha1),
 			'Variance of the ratio': var, 
-			'Relative error': rel_error}
+			'Relative error': rel_error,
+			'Strata ratios': str_ratios}
 		
