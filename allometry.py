@@ -258,7 +258,7 @@ def holdridge_col(altitude, precipitation):
 def weibull(diameter, a = 42.574, b = 0.0482, c = 0.8307):
 	"""
 	Weibull function to estimate tree height (Feldpausch et al. 2012,
-	Biogeosciences 9:3381-3403, eq 5). Requires know values of coefficients
+	Biogeosciences 9:3381-3403, eq 5). Requires known values of coefficients
 	a, b, and c.
 
 	"""
