@@ -44,15 +44,20 @@ def fornofor(longitude, latitude, raster):
 
 	elif raster_api == "rasterio":
 		myras = rasterio.open(raster)
-		transform = myras.transform
-		pixelsX = myras.height
-		pixelsY = myras.width
-		xOrigin = transform[0]
-		yOrigin = transform[3]
-		pixelWidth = transform[1]
-		pixelHeight = transform[5]
-		px = int((longitude - xOrigin) / pixelWidth) #x pixel
-		py = int((latitude - yOrigin) / pixelHeight) #y pixel
+		py, px = map(lambda x: int(x), myras.index(longitude, latitude))
+		
+		#Anterior version del wrapper de rasterio
+		
+		#transform = myras.transform
+		#pixelsX = myras.height
+		#pixelsY = myras.width
+		#xOrigin = transform[0]
+		#yOrigin = transform[3]
+		#pixelWidth = transform[1]
+		#pixelHeight = transform[5]
+		#px = int((longitude - xOrigin) / pixelWidth) #x pixel
+		#py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			
 		val = myras.read(1, window=((py, py+1), (px, px+1))).flatten()[0]
 		#print val
 
