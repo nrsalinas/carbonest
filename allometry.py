@@ -109,27 +109,27 @@ def altitude(longitude, latitude, raster):
 		while out is None:
 			alt = np.array([])
 			myras = rasterio.open(raster)
-			transform = myras.transform
-			pixelsX = myras.height
-			#print 'pixelsX', pixelsX
-			pixelsY = myras.width
-			#print 'pixelsY', pixelsY
-			xOrigin = transform[0]
-			yOrigin = transform[3]
-			pixelWidth = transform[1]
-			pixelHeight = transform[5]
-			px = int((longitude - xOrigin) / pixelWidth) #x pixel
-			py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			py, px = map(lambda x: int(x), myras.index(longitude, latitude))
+			
+			#transform = myras.transform
+			#pixelsX = myras.height
+			#pixelsY = myras.width
+			#xOrigin = transform[0]
+			#yOrigin = transform[3]
+			#pixelWidth = transform[1]
+			#pixelHeight = transform[5]
+			#px = int((longitude - xOrigin) / pixelWidth) #x pixel
+			#py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			
 			pxs = (px-radius, px+radius+1)
 			pys = (py-radius, py+radius+1)
-			#print 'pxs', pxs
-			#print 'pys', pys
+			#val = myras.read(1, window=((py, py+1), (px, px+1))).flatten()[0]
 			alts = myras.read(1, window=(pys, pxs)).flatten()
-			#print alts
 			alts = alts[np.where((alts > -100) & (abs(alts) != np.inf))]
 			if alts.shape[0] > 0:
 				out = alts.mean()
 			radius += 1
+			
 	else:
 		pass
 
@@ -179,13 +179,16 @@ def precipitation(longitude, latitude, raster_file):
 			prec = []
 			if raster_file.endswith('.tif') or raster_file.endswith('.bil'):
 				prec_raster = rasterio.open(raster_file)
-				transform = prec_raster.transform
-				xOrigin = transform[0]
-				yOrigin = transform[3]
-				pixelWidth = transform[1]
-				pixelHeight = transform[5]
-				px = int((longitude - xOrigin) / pixelWidth) #x pixel
-				py = int((latitude - yOrigin) / pixelHeight) #y pixel
+				py, px = map(lambda x: int(x), prec_raster.index(longitude, latitude))
+				
+				#transform = prec_raster.transform
+				#xOrigin = transform[0]
+				#yOrigin = transform[3]
+				#pixelWidth = transform[1]
+				#pixelHeight = transform[5]
+				#px = int((longitude - xOrigin) / pixelWidth) #x pixel
+				#py = int((latitude - yOrigin) / pixelHeight) #y pixel
+				
 				pxs = (px-radius, px+radius+1)
 				pys = (py-radius, py+radius+1)
 				prec = prec_raster.read(1, window=(pys, pxs)).flatten()
@@ -562,7 +565,8 @@ def alvarez_dh(diameter, height, density, forest_type):
 def alvarez(diameter, density, forest_type):
 	"""
 	Estimates tree biomass (Kg) through the allometric equations type II.1
-	proposed by Alvarez et al. 2012, Forest Ecology and Managament 267: 297-308. Returns a float.
+	proposed by Alvarez et al. 2012, Forest Ecology and Managament 267: 297-308.
+	Ecuation range: 10-198.9 cm. Returns a float.
 
 	Arguments:
 
