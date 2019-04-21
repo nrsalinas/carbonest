@@ -14,7 +14,7 @@ except ImportError:
 		raster_api = "gdal"
 
 	except ImportError:
-		print "Warning: No SIG library found, raster files will not read."
+		print "Warning: No SIG library found, raster files will not be read."
 
 	except:
 		raise
@@ -45,19 +45,6 @@ def fornofor(longitude, latitude, raster):
 	elif raster_api == "rasterio":
 		myras = rasterio.open(raster)
 		py, px = map(lambda x: int(x), myras.index(longitude, latitude))
-		
-		#Anterior version del wrapper de rasterio
-		
-		#transform = myras.transform
-		#pixelsX = myras.height
-		#pixelsY = myras.width
-		#xOrigin = transform[0]
-		#yOrigin = transform[3]
-		#pixelWidth = transform[1]
-		#pixelHeight = transform[5]
-		#px = int((longitude - xOrigin) / pixelWidth) #x pixel
-		#py = int((latitude - yOrigin) / pixelHeight) #y pixel
-			
 		val = myras.read(1, window=((py, py+1), (px, px+1))).flatten()[0]
 		#print val
 
@@ -110,17 +97,7 @@ def altitude(longitude, latitude, raster):
 			alt = np.array([])
 			myras = rasterio.open(raster)
 			py, px = map(lambda x: int(x), myras.index(longitude, latitude))
-			
-			#transform = myras.transform
-			#pixelsX = myras.height
-			#pixelsY = myras.width
-			#xOrigin = transform[0]
-			#yOrigin = transform[3]
-			#pixelWidth = transform[1]
-			#pixelHeight = transform[5]
-			#px = int((longitude - xOrigin) / pixelWidth) #x pixel
-			#py = int((latitude - yOrigin) / pixelHeight) #y pixel
-			
+
 			pxs = (px-radius, px+radius+1)
 			pys = (py-radius, py+radius+1)
 			#val = myras.read(1, window=((py, py+1), (px, px+1))).flatten()[0]
@@ -129,7 +106,7 @@ def altitude(longitude, latitude, raster):
 			if alts.shape[0] > 0:
 				out = alts.mean()
 			radius += 1
-			
+
 	else:
 		pass
 
@@ -180,15 +157,7 @@ def precipitation(longitude, latitude, raster_file):
 			if raster_file.endswith('.tif') or raster_file.endswith('.bil'):
 				prec_raster = rasterio.open(raster_file)
 				py, px = map(lambda x: int(x), prec_raster.index(longitude, latitude))
-				
-				#transform = prec_raster.transform
-				#xOrigin = transform[0]
-				#yOrigin = transform[3]
-				#pixelWidth = transform[1]
-				#pixelHeight = transform[5]
-				#px = int((longitude - xOrigin) / pixelWidth) #x pixel
-				#py = int((latitude - yOrigin) / pixelHeight) #y pixel
-				
+
 				pxs = (px-radius, px+radius+1)
 				pys = (py-radius, py+radius+1)
 				prec = prec_raster.read(1, window=(pys, pxs)).flatten()
@@ -317,13 +286,7 @@ def getE(longitude, latitude, raster_file):
 		while out is None:
 			ee = []
 			E_raster = rasterio.open(raster_file)
-			transform = E_raster.transform
-			xOrigin = transform[0]
-			yOrigin = transform[3]
-			pixelWidth = transform[1]
-			pixelHeight = transform[5]
-			px = int((longitude - xOrigin) / pixelWidth) #x pixel
-			py = int((latitude - yOrigin) / pixelHeight) #y pixel
+			py, px = map(lambda x: int(x), E_raster.index(longitude, latitude))
 			pxs = (px-radius, px+radius+1)
 			pys = (py-radius, py+radius+1)
 			ee = E_raster.read(1, window=(pys, pxs)).flatten()
